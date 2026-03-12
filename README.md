@@ -11,20 +11,20 @@ CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos 
 ## Table of contents
 
 - [Features](#features)
-- [How it differs from other tools](#how-it-differs-from-other-tools)
-- [Supported protocols](#supported-protocols)
 - [Installation](#installation)
 - [Quick start](#quick-start)
+- [Supported protocols](#supported-protocols)
+- [Usage examples](#usage-examples)
+- [Working with secretsdump output](#working-with-secretsdump-output)
 - [CLI reference](#cli-reference)
 - [Output format](#output-format)
-- [Usage examples](#usage-examples)
 - [Hash and key formats](#hash-and-key-formats)
-- [Working with secretsdump output](#working-with-secretsdump-output)
 - [Error handling](#error-handling)
 - [Kerberos authentication flow and account lockout](#kerberos-authentication-flow-and-account-lockout)
+- [Known limitations](#known-limitations)
+- [How it differs from other tools](#how-it-differs-from-other-tools)
 - [Credential combination matrix](#credential-combination-matrix)
 - [Development](#development)
-- [Known limitations](#known-limitations)
 - [Roadmap](#roadmap)
 - [Disclaimer](#disclaimer)
 - [Credits](#credits)
@@ -35,70 +35,13 @@ CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos 
 - **NTLM + Kerberos** — validate credentials over SMB, LDAP, LDAPS, and Kerberos pre-authentication (UDP/TCP)
 - **Every secret type** — passwords, NT hashes (bare + LM:NT), RC4 keys, AES128 keys, AES256 keys, and ticket files (ccache/kirbi with auto-detection)
 - **Username enumeration** — discover valid AD accounts via Kerberos without triggering login failures or lockouts; ASREProastable accounts flagged automatically
+- **Username case correction** — when using Kerberos AES authentication, the KDC returns the correct username casing in the salt. CredWolf detects this and uses the corrected name in all output (console, file, and logs)
 - **88+ credential permutations** — every meaningful combination of user sources, secret sources, encryption types, and transports
 - **Paired files** — user:password, user:hash, and user:key files for pre-matched credential testing
 - **Machine-parseable output** — `domain/user:secret@type` format, easy to grep or pipe
 - **Safety-first errors** — clock skew stops execution immediately, per-user skip on unknown/revoked principals, detailed account status detection (disabled, expired, locked, revoked, not-yet-valid, null-key)
 - **Rate limiting** — `--delay`, `--jitter`, and `--max-lockouts` to avoid triggering lockout policies
 - **Validation only** — no post-authentication activity by design
-
-## How it differs from other tools
-
-Most credential testing tools are built around exploitation workflows — they authenticate and then enumerate shares, dump SAM, exec commands, etc. CredWolf does one thing: **validate credentials**. It does not attempt any post-authentication activity.
-
-- **Protocol coverage** — NTLM (SMB, LDAP, LDAPS) and Kerberos pre-authentication in a single tool, with every meaningful combination of user sources and secret sources (88+ permutations).
-- **Clean output** — valid credentials are printed in a machine-parseable `domain/user:secret@type` format. No tables, no colors in the output line, easy to `grep` or pipe.
-- **Safety-first error handling** — clock skew stops execution immediately (instead of silently producing false negatives), `KRB_ERR_RESPONSE_TOO_BIG` tells you to switch to TCP (instead of guessing validity), and raw SMB error codes are passed through (instead of hiding them behind generic messages).
-- **Username enumeration** — discover valid AD accounts via Kerberos without triggering login failures or account lockouts. ASREProastable accounts (pre-authentication not required) are flagged automatically.
-- **Rate limiting** — built-in `--delay`, `--jitter`, and `--max-lockouts` to avoid triggering account lockout policies.
-
-### Comparison with existing tools
-
-| Feature | **CredWolf** | [kerbrute](https://github.com/ropnop/kerbrute) | [ADSpray](https://github.com/ZephrFish/ADSpray) | [NetExec](https://github.com/Pennyw0rth/NetExec) | [smartbrute](https://github.com/ShutdownRepo/smartbrute) | [pyKerbrute](https://github.com/3gstudent/pyKerbrute) | [SprayHound](https://github.com/Hackndo/sprayhound) | [SmartSpray](https://github.com/GabrielDuschl/SmartSpray) |
-|---|---|---|---|---|---|---|---|---|
-| **Focus** | Credential validation only | Kerberos spray/enum | Credential spraying | Post-exploitation framework | Smart brute-force | Kerberos spray/enum | Password spraying | Password spraying |
-| **Language** | Python 3.11+ | Go | Python 3 | Python 3 | Python 3.6+ | Python 2 | Python 3.6+ | Python 3.6+ |
-| **NTLM auth** | SMB, LDAP, LDAPS | — | LDAP, LDAPS | SMB, LDAP, LDAPS, WinRM, MSSQL, RDP, SSH, FTP, VNC, NFS, WMI | SMB, LDAP, LDAPS | — | LDAP, LDAPS | SMB |
-| **Kerberos pre-auth** | UDP, TCP | UDP (auto) | via Impacket | via Impacket | UDP, TCP | UDP, TCP | — | — |
-| **Passwords** | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| **NT hashes** | Yes (bare + LM:NT) | — | Yes | Yes | Yes | Yes | — | — |
-| **AES128 / AES256 keys** | Yes (inline + file) | — | — | AES keys supported | AES128, AES256 | — | — | — |
-| **RC4 keys** | Yes (inline + file) | — | — | — | Yes | — | — | — |
-| **Ticket files (ccache/kirbi)** | Yes (auto-detect) | — | — | ccache | ccache | — | — | — |
-| **User:secret paired files** | user:pass, user:hash, user:key | user:pass (bruteforce mode) | — | — | — | — | — | — |
-| **Username enumeration** | Yes (Kerberos, no login attempt) | Yes (Kerberos, no login attempt) | LDAP + Kerberos | RID brute, LDAP | LDAP (smart mode) | Yes (Kerberos) | — | — |
-| **ASREProastable detection** | Yes (flagged during enum) | Yes (AS-REP hash capture) | — | Yes (dedicated flag) | — | — | — | — |
-| **Clock skew handling** | Stops execution with server time | Logs warning, continues | — | — | Logs warning | — | — | — |
-| **Account status detection** | Disabled, expired, locked, revoked, not-yet-valid, null-key | Locked, expired | Disabled, locked, expired | Disabled, expired, locked, must-change, restriction | Disabled, expired, must-change | — | Disabled (LDAP filter) | — |
-| **Per-user skip on error** | Yes (unknown, revoked, wrong realm) | — | — | — | — | — | — | — |
-| **Delay / jitter** | Yes / Yes | Delay only (forces single-thread) | Yes / Yes | Jitter only | Delay only | — | — | Stealth mode (0.5–1.5s) |
-| **Max lockout safety** | `--max-lockouts` (consecutive revoked) | `--safe` (abort on any lockout) | Per-user threshold + policy query | Global, per-user, per-host fail limits | Policy query + PSO + badPwdCount | — | badPwdCount + threshold + PSO | Threshold - 3 buffer |
-| **Machine-parseable output** | `domain/user:secret@type` | — | JSON, CSV, TXT | Database + log file | — | — | — | CSV |
-| **File output** | `-o` flag | `-o` flag + `--hash-file` | `-o` with format choice | `--log` + database | Not implemented (TODO) | — | — | `--output` CSV |
-| **Verbosity levels** | 3 (`-v` / `-vv` / `-vvv`) | 1 (`-v`) | 1 (`-v`) | 1 (`-v`) | 2 (`-v` / `-vv`) | — | 2 (`-v` / `-vv`) | Quiet mode only |
-| **Post-auth actions** | **None** (by design) | None | None | Extensive (shares, SAM, NTDS, exec, BloodHound) | Domain enum, local admin check | None | BloodHound mark-as-owned | None |
-| **Parallel execution** | Sequential | 10 goroutines (default) | Sequential | 256 threads (default) | Sequential | Sequential | Sequential | Sequential |
-| **Session resume** | — | — | `--save-state` / `--resume` | Database-driven | — | — | — | `spray_state.json` |
-| **Proxy support** | — | — | SOCKS4/5, HTTP, SSH tunnels | — | — | — | — | — |
-| **BloodHound integration** | — | — | — | Yes (collection module) | Neo4j: mark-as-owned + path-to-DA | — | Neo4j: mark-as-owned + path-to-DA | — |
-| **AD policy query** | — | — | Lockout policy + recommendations | — | Lockout policy + PSO | — | Lockout policy + PSO | — |
-| **Test suite** | pytest (unit + integration) | — | — | E2E + database tests | Smoke test only | — | Smoke test only | — |
-
-**Key differentiators:**
-
-- **CredWolf vs kerbrute** — kerbrute is the closest competitor: fast (Go, goroutines), Kerberos-focused, and widely adopted. However, it only supports passwords — no hashes, no AES/RC4 keys, no ticket files. It has no NTLM support (SMB/LDAP/LDAPS), no paired user:hash or user:key files, no jitter, and no machine-parseable output format. Its `--delay` forces single-threaded execution. CredWolf trades parallelism (sequential, for now) for protocol depth, secret type coverage, and deterministic error handling.
-- **Secret type coverage** — CredWolf is the only tool that supports passwords, NT hashes, RC4 keys, AES128 keys, AES256 keys, and ticket files (ccache/kirbi) with auto-detection, all in a single binary. kerbrute, ADSpray, and pyKerbrute only support passwords (kerbrute) or passwords and NT hashes (ADSpray, pyKerbrute). SmartSpray and SprayHound only support passwords.
-- **Credential combination depth** — 88+ permutations of user sources, secret sources, etypes, and transports. No other tool covers the full matrix of NTLM and Kerberos authentication scenarios.
-- **Safety-first error model** — CredWolf stops on clock skew (kerbrute logs a warning and continues, risking false negatives), skips users after `KDC_ERR_C_PRINCIPAL_UNKNOWN` / `CLIENT_REVOKED` (kerbrute and others keep trying), and caches AES salts (avoiding extra requests). Each wrong password maps to exactly 1 failed login — no hidden counter inflation.
-- **No post-auth scope creep** — tools like NetExec, smartbrute, and SprayHound bundle post-exploitation (share enumeration, SAM dump, BloodHound). This makes them harder to audit, heavier to deploy, and noisier on the wire. CredWolf validates credentials and nothing else.
-- **Modern Python** — Python 3.11+ with type annotations, pytest coverage, and CI. pyKerbrute requires Python 2 and PyCrypto (unmaintained). smartbrute self-describes as "more PoC than stable tool".
-
-## Supported protocols
-
-| Protocol | Transport | Secret types |
-|----------|-----------|--------------|
-| **NTLM** | SMB (default), LDAP, LDAPS | Password, NT hash |
-| **Kerberos** | UDP (default), TCP | Password, RC4 key, AES128 key, AES256 key, ticket (ccache/kirbi) |
 
 ## Installation
 
@@ -138,6 +81,10 @@ The `cw` command is also installed as a shorthand for `credwolf`.
 ## Quick start
 
 ```bash
+# Validate a password over SMB
+$ credwolf -d evil.corp ntlm --dc-ip 10.0.0.1 -u Administrator -p 'Password1!'
+[+] evil.corp/Administrator:Password1!@password
+
 # Validate an NT hash over SMB (pass-the-hash)
 $ credwolf -d evil.corp ntlm --dc-ip 10.0.0.1 -u Administrator --hash 7facdc498ed1680c4fd1448319a8c04f
 [+] evil.corp/Administrator:7facdc498ed1680c4fd1448319a8c04f@nt_hash
@@ -149,89 +96,20 @@ $ credwolf -d evil.corp kerberos --kdc-ip 10.0.0.1 -u Administrator --aes256-key
 # Validate an NT hash as RC4 key over Kerberos (overpass-the-hash)
 $ credwolf -d evil.corp kerberos --kdc-ip 10.0.0.1 -u Administrator --rc4-key 7facdc498ed1680c4fd1448319a8c04f --transport tcp
 [+] evil.corp/Administrator:7facdc498ed1680c4fd1448319a8c04f@rc4_key
+
+# Enumerate valid usernames (no login attempts, no lockout risk)
+$ credwolf -d evil.corp userenum --kdc-ip 10.0.0.1 -U users.txt
+[+] evil.corp/Administrator
+[+] evil.corp/svc_backup — no_preauth (ASREProastable)
+[*] Enumeration complete: 2/5 users found
 ```
 
-## CLI reference
+## Supported protocols
 
-### Global options
-
-| Short | Long | Description |
-|-------|------|-------------|
-| `-d` | `--domain` | Domain name (required) |
-| `-o` | `--output` | Write valid credentials to file |
-| `-v` | `--verbose` | Verbosity level (`-v` verbose, `-vv` debug, `-vvv` trace) |
-| | `--stop-on-success` | Stop on first valid credential |
-| | `--delay` | Seconds to wait between attempts (default: 0) |
-| | `--jitter` | Random jitter +/- seconds added to delay (default: 0) |
-| | `--timeout` | Connection timeout in seconds; 0 for no timeout (default: 15) |
-| | `--max-lockouts` | Stop after N consecutive revoked accounts; 0 to disable (default: 0) |
-| | `--version` | Show version and exit |
-
-### NTLM options
-
-| Short | Long | Description |
-|-------|------|-------------|
-| `-u` | `--user` | Single username |
-| `-U` | `--users-file` | File containing usernames (one per line) |
-| `-p` | `--password` | Single password |
-| `-P` | `--passwords-file` | File containing passwords (one per line) |
-| `-H` | `--hashes-file` | File containing NT hashes or LM:NT pairs (one per line) |
-| | `--hash` | Single hash (NT or LM:NT format) |
-| | `--user-pass-file` | Colon-separated `user:password` file |
-| | `--user-hash-file` | Colon-separated `user:hash` file (NT or LM:NT) |
-| | `--dc-ip` | Domain controller IP (required) |
-| | `--transport` | Transport protocol: `smb` (default), `ldap`, `ldaps` |
-
-### Kerberos options
-
-| Short | Long | Description |
-|-------|------|-------------|
-| `-u` | `--user` | Single username |
-| `-U` | `--users-file` | File containing usernames (one per line) |
-| `-p` | `--password` | Single password |
-| `-P` | `--passwords-file` | File containing passwords (one per line) |
-| | `--rc4-key` | Single RC4/NT key (32 hex chars) |
-| | `--aes128-key` | Single AES128 key (32 hex chars) |
-| | `--aes256-key` | Single AES256 key (64 hex chars) |
-| | `--rc4-file` | File containing RC4/NT keys (one per line) |
-| | `--aes128-file` | File containing AES128 keys (one per line) |
-| | `--aes256-file` | File containing AES256 keys (one per line) |
-| | `--ticket` | Ticket file containing a TGT (`.ccache` or `.kirbi`, auto-detected) |
-| | `--user-key-file` | Colon-separated `user:key` file (auto-detects key type) |
-| | `--kdc-ip` | KDC IP address (required) |
-| | `--transport` | Transport protocol: `udp` (default), `tcp` |
-| `-e` | `--etype` | Encryption type: `rc4` (default), `aes128`, `aes256` |
-
-### Username enumeration options
-
-| Short | Long | Description |
-|-------|------|-------------|
-| `-u` | `--user` | Single username |
-| `-U` | `--users-file` | File containing usernames (one per line) |
-| | `--kdc-ip` | KDC IP address (required) |
-| | `--transport` | Transport protocol: `udp` (default), `tcp` |
-
-## Output format
-
-Valid credentials are printed as:
-
-```
-domain/user:secret@type
-```
-
-Where `type` is one of: `password`, `nt_hash`, `rc4_key`, `aes128_key`, `aes256_key`, `ccache`, `kirbi`.
-
-Examples:
-
-```
-evil.corp/Administrator:Password1!@password
-evil.corp/Administrator:7facdc498ed1680c4fd1448319a8c04f@nt_hash
-evil.corp/Administrator:7facdc498ed1680c4fd1448319a8c04f@rc4_key
-evil.corp/Administrator:4bbb66ffd90a18f248b909016eb4b75f@aes128_key
-evil.corp/Administrator:9b12da6a4bdc263c1ac8f6302dc071e6e84321a263fa48784534b1ae43db2925@aes256_key
-```
-
-When writing to a file with `-o`/`--output`, the same format is used (one line per valid credential, no color or status prefixes).
+| Protocol | Transport | Secret types |
+|----------|-----------|--------------|
+| **NTLM** | SMB (default), LDAP, LDAPS | Password, NT hash |
+| **Kerberos** | UDP (default), TCP | Password, RC4 key, AES128 key, AES256 key, ticket (ccache/kirbi) |
 
 ## Usage examples
 
@@ -268,7 +146,6 @@ credwolf -d evil.corp ntlm --dc-ip 10.0.0.1 --user-hash-file creds.txt
 
 # Use LDAP transport instead of SMB
 credwolf -d evil.corp ntlm --dc-ip 10.0.0.1 -u Administrator --hash 7facdc498ed1680c4fd1448319a8c04f --transport ldap
-# [+] evil.corp/Administrator:7facdc498ed1680c4fd1448319a8c04f@nt_hash
 
 # Use LDAPS transport
 credwolf -d evil.corp ntlm --dc-ip 10.0.0.1 -u Administrator --hash 7facdc498ed1680c4fd1448319a8c04f --transport ldaps
@@ -386,39 +263,6 @@ credwolf --timeout 0 -d evil.corp kerberos --kdc-ip 10.0.0.1 -U users.txt -P pas
 credwolf --max-lockouts 3 -d evil.corp kerberos --kdc-ip 10.0.0.1 -U users.txt -P passwords.txt --transport tcp
 ```
 
-## Hash and key formats
-
-### NTLM hashes (`--hash`, `-H`/`--hashes-file`, `--user-hash-file`)
-
-Each value is either a bare NT hash or an LM:NT pair. LM hashes are accepted as input but never shown in output — only the NT hash is displayed.
-
-```
-7facdc498ed1680c4fd1448319a8c04f
-aad3b435b51404eeaad3b435b51404ee:7facdc498ed1680c4fd1448319a8c04f
-```
-
-Both formats can be mixed in the same file. Invalid lines are skipped with a warning.
-
-### Kerberos keys
-
-| Type | Bytes | Hex chars | Inline flag | File flag |
-|------|-------|-----------|-------------|-----------|
-| RC4 | 16 | 32 | `--rc4-key` | `--rc4-file` |
-| AES128 | 16 | 32 | `--aes128-key` | `--aes128-file` |
-| AES256 | 32 | 64 | `--aes256-key` | `--aes256-file` |
-
-**RC4/AES128 ambiguity:** RC4 and AES128 keys are both 32 hex characters and cannot be distinguished by length. The `--user-key-file` auto-detection defaults 32-char keys to RC4. To treat them as AES128 instead, pass `-e aes128`:
-
-```bash
-# 32-hex keys treated as RC4 (default)
-credwolf -d evil.corp kerberos --kdc-ip 10.0.0.1 --user-key-file pairs.txt --transport tcp
-
-# 32-hex keys treated as AES128
-credwolf -d evil.corp kerberos --kdc-ip 10.0.0.1 --user-key-file pairs.txt -e aes128 --transport tcp
-```
-
-64-hex keys are always AES256 regardless of `--etype`.
-
 ## Working with secretsdump output
 
 credwolf accepts hashes and keys directly from Impacket's `secretsdump.py` / DCSync output. Here's how each format maps to credwolf flags:
@@ -468,6 +312,133 @@ credwolf -d evil.corp kerberos --kdc-ip 10.0.0.1 -u Administrator --rc4-key 7fac
 # [+] evil.corp/Administrator:7facdc498ed1680c4fd1448319a8c04f@rc4_key
 # [+] evil.corp/Administrator:9b12da6a4bdc263c1ac8f6302dc071e6e84321a263fa48784534b1ae43db2925@aes256_key
 ```
+
+## CLI reference
+
+### Global options
+
+| Short | Long | Description |
+|-------|------|-------------|
+| `-d` | `--domain` | Domain name (required) |
+| `-o` | `--output` | Write valid credentials to file |
+| `-v` | `--verbose` | Verbosity level (`-v` verbose, `-vv` debug, `-vvv` trace) |
+| | `--stop-on-success` | Stop on first valid credential |
+| | `--delay` | Seconds to wait between attempts (default: 0) |
+| | `--jitter` | Random jitter +/- seconds added to delay (default: 0) |
+| | `--timeout` | Connection timeout in seconds; 0 for no timeout (default: 15) |
+| | `--max-lockouts` | Stop after N consecutive revoked accounts; 0 to disable (default: 0) |
+| | `--version` | Show version and exit |
+
+### NTLM options
+
+| Short | Long | Description |
+|-------|------|-------------|
+| `-u` | `--user` | Single username |
+| `-U` | `--users-file` | File containing usernames (one per line) |
+| `-p` | `--password` | Single password |
+| `-P` | `--passwords-file` | File containing passwords (one per line) |
+| `-H` | `--hashes-file` | File containing NT hashes or LM:NT pairs (one per line) |
+| | `--hash` | Single hash (NT or LM:NT format) |
+| | `--user-pass-file` | Colon-separated `user:password` file |
+| | `--user-hash-file` | Colon-separated `user:hash` file (NT or LM:NT) |
+| | `--dc-ip` | Domain controller IP (required) |
+| | `--transport` | Transport protocol: `smb` (default), `ldap`, `ldaps` |
+
+### Kerberos options
+
+| Short | Long | Description |
+|-------|------|-------------|
+| `-u` | `--user` | Single username |
+| `-U` | `--users-file` | File containing usernames (one per line) |
+| `-p` | `--password` | Single password |
+| `-P` | `--passwords-file` | File containing passwords (one per line) |
+| | `--rc4-key` | Single RC4/NT key (32 hex chars) |
+| | `--aes128-key` | Single AES128 key (32 hex chars) |
+| | `--aes256-key` | Single AES256 key (64 hex chars) |
+| | `--rc4-file` | File containing RC4/NT keys (one per line) |
+| | `--aes128-file` | File containing AES128 keys (one per line) |
+| | `--aes256-file` | File containing AES256 keys (one per line) |
+| | `--ticket` | Ticket file containing a TGT (`.ccache` or `.kirbi`, auto-detected) |
+| | `--user-key-file` | Colon-separated `user:key` file (auto-detects key type) |
+| | `--kdc-ip` | KDC IP address (required) |
+| | `--transport` | Transport protocol: `udp` (default), `tcp` |
+| `-e` | `--etype` | Encryption type: `rc4` (default), `aes128`, `aes256` |
+
+### Username enumeration options
+
+| Short | Long | Description |
+|-------|------|-------------|
+| `-u` | `--user` | Single username |
+| `-U` | `--users-file` | File containing usernames (one per line) |
+| | `--kdc-ip` | KDC IP address (required) |
+| | `--transport` | Transport protocol: `udp` (default), `tcp` |
+
+## Output format
+
+Valid credentials are printed as:
+
+```
+domain/user:secret@type
+```
+
+Where `type` is one of: `password`, `nt_hash`, `rc4_key`, `aes128_key`, `aes256_key`, `ccache`, `kirbi`.
+
+Examples:
+
+```
+evil.corp/Administrator:Password1!@password
+evil.corp/Administrator:7facdc498ed1680c4fd1448319a8c04f@nt_hash
+evil.corp/Administrator:7facdc498ed1680c4fd1448319a8c04f@rc4_key
+evil.corp/Administrator:4bbb66ffd90a18f248b909016eb4b75f@aes128_key
+evil.corp/Administrator:9b12da6a4bdc263c1ac8f6302dc071e6e84321a263fa48784534b1ae43db2925@aes256_key
+```
+
+When writing to a file with `-o`/`--output`, the same format is used (one line per valid credential, no color or status prefixes).
+
+### Username case correction
+
+When Kerberos AES authentication is used, the KDC returns the correct username casing in the ETYPE-INFO2 salt (format `REALMusername`). CredWolf extracts this and automatically corrects the username in all output — console, output file, and logs.
+
+```bash
+$ credwolf -v -d evil.corp kerberos --kdc-ip 10.0.0.1 -u ADMINISTRATOR -P passwords.txt -e aes256 --transport tcp
+[VERBOSE] Username case corrected by KDC: ADMINISTRATOR → Administrator
+[+] evil.corp/Administrator:Password1!@password
+```
+
+The corrected casing is also used in the output file. This only applies to Kerberos with AES password authentication (which triggers salt retrieval). NTLM and Kerberos with raw keys or RC4 passwords use the username as provided.
+
+## Hash and key formats
+
+### NTLM hashes (`--hash`, `-H`/`--hashes-file`, `--user-hash-file`)
+
+Each value is either a bare NT hash or an LM:NT pair. LM hashes are accepted as input but never shown in output — only the NT hash is displayed.
+
+```
+7facdc498ed1680c4fd1448319a8c04f
+aad3b435b51404eeaad3b435b51404ee:7facdc498ed1680c4fd1448319a8c04f
+```
+
+Both formats can be mixed in the same file. Invalid lines are skipped with a warning.
+
+### Kerberos keys
+
+| Type | Bytes | Hex chars | Inline flag | File flag |
+|------|-------|-----------|-------------|-----------|
+| RC4 | 16 | 32 | `--rc4-key` | `--rc4-file` |
+| AES128 | 16 | 32 | `--aes128-key` | `--aes128-file` |
+| AES256 | 32 | 64 | `--aes256-key` | `--aes256-file` |
+
+**RC4/AES128 ambiguity:** RC4 and AES128 keys are both 32 hex characters and cannot be distinguished by length. The `--user-key-file` auto-detection defaults 32-char keys to RC4. To treat them as AES128 instead, pass `-e aes128`:
+
+```bash
+# 32-hex keys treated as RC4 (default)
+credwolf -d evil.corp kerberos --kdc-ip 10.0.0.1 --user-key-file pairs.txt --transport tcp
+
+# 32-hex keys treated as AES128
+credwolf -d evil.corp kerberos --kdc-ip 10.0.0.1 --user-key-file pairs.txt -e aes128 --transport tcp
+```
+
+64-hex keys are always AES256 regardless of `--etype`.
 
 ## Error handling
 
@@ -557,6 +528,67 @@ credwolf --max-lockouts 3 -d evil.corp kerberos --kdc-ip 10.0.0.1 -U users.txt -
 ```
 
 **Note on `KDC_ERR_CLIENT_REVOKED`:** This Kerberos error code does not distinguish between accounts that are disabled, expired, locked out, or outside their allowed logon hours. CredWolf reports all four possibilities in the warning message. The `--max-lockouts` flag counts consecutive `CLIENT_REVOKED` responses — if your scan triggers N in a row, it is likely that the scan itself is causing lockouts rather than encountering pre-existing disabled/expired accounts. To determine the specific cause, test the affected accounts over NTLM (`credwolf ntlm`).
+
+## Known limitations
+
+- **ASREProastable users + AES password + wrong username case.** When a user has pre-authentication disabled (ASREProastable), the KDC returns an AS-REP instead of `KDC_ERR_PREAUTH_REQUIRED` during salt retrieval. This means no ETYPE-INFO2 data is available to extract the correct username casing. CredWolf synthesizes a default salt using `REALM + username_as_typed`. Since AES salt is case-sensitive, if the input case doesn't match AD (e.g., `USER1` vs `user1`), the derived key will be wrong and the password will be reported as invalid even if correct. **Workaround:** use the correct username casing, or use `-e rc4` (RC4 doesn't use salt). This does not affect NTLM, Kerberos with raw keys, or non-ASREProastable accounts (whose correct case is extracted from ETYPE-INFO2 automatically).
+- Kerberos over UDP may produce `KRB_ERR_RESPONSE_TOO_BIG` for some users. Use `--transport tcp` as a workaround.
+- Clock skew between the client and KDC causes `KRB_AP_ERR_SKEW`. Sync your system clock before running Kerberos authentication.
+- AES128 and RC4 Kerberos keys share the same hex length (32 chars). Auto-detection in `--user-key-file` defaults to RC4; use `-e aes128` to override.
+- LDAPS transport requires the domain controller to have a valid TLS certificate configuration. Connection resets typically indicate LDAPS is not available on the target.
+- LM hashes are accepted as input (for compatibility with hash dumps) but are not used for authentication or shown in output. Only the NT hash portion is used.
+- No ability to query the domain's lockout policy or fine-grained password policies (PSOs) directly. Operators must determine safe thresholds externally.
+
+## How it differs from other tools
+
+Most credential testing tools are built around exploitation workflows — they authenticate and then enumerate shares, dump SAM, exec commands, etc. CredWolf does one thing: **validate credentials**. It does not attempt any post-authentication activity.
+
+- **Protocol coverage** — NTLM (SMB, LDAP, LDAPS) and Kerberos pre-authentication in a single tool, with every meaningful combination of user sources and secret sources (88+ permutations).
+- **Clean output** — valid credentials are printed in a machine-parseable `domain/user:secret@type` format. No tables, no colors in the output line, easy to `grep` or pipe.
+- **Safety-first error handling** — clock skew stops execution immediately (instead of silently producing false negatives), `KRB_ERR_RESPONSE_TOO_BIG` tells you to switch to TCP (instead of guessing validity), and raw SMB error codes are passed through (instead of hiding them behind generic messages).
+- **Username enumeration** — discover valid AD accounts via Kerberos without triggering login failures or account lockouts. ASREProastable accounts (pre-authentication not required) are flagged automatically.
+- **Rate limiting** — built-in `--delay`, `--jitter`, and `--max-lockouts` to avoid triggering account lockout policies.
+
+### Comparison with existing tools
+
+| Feature | **CredWolf** | [kerbrute](https://github.com/ropnop/kerbrute) | [ADSpray](https://github.com/ZephrFish/ADSpray) | [NetExec](https://github.com/Pennyw0rth/NetExec) | [smartbrute](https://github.com/ShutdownRepo/smartbrute) | [pyKerbrute](https://github.com/3gstudent/pyKerbrute) | [SprayHound](https://github.com/Hackndo/sprayhound) | [SmartSpray](https://github.com/GabrielDuschl/SmartSpray) |
+|---|---|---|---|---|---|---|---|---|
+| **Focus** | Credential validation only | Kerberos spray/enum | Credential spraying | Post-exploitation framework | Smart brute-force | Kerberos spray/enum | Password spraying | Password spraying |
+| **Language** | Python 3.11+ | Go | Python 3 | Python 3 | Python 3.6+ | Python 2 | Python 3.6+ | Python 3.6+ |
+| **NTLM auth** | SMB, LDAP, LDAPS | — | LDAP, LDAPS | SMB, LDAP, LDAPS, WinRM, MSSQL, RDP, SSH, FTP, VNC, NFS, WMI | SMB, LDAP, LDAPS | — | LDAP, LDAPS | SMB |
+| **Kerberos pre-auth** | UDP, TCP | UDP (auto) | via Impacket | via Impacket | UDP, TCP | UDP, TCP | — | — |
+| **Passwords** | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| **NT hashes** | Yes (bare + LM:NT) | — | Yes | Yes | Yes | Yes | — | — |
+| **AES128 / AES256 keys** | Yes (inline + file) | — | — | AES keys supported | AES128, AES256 | — | — | — |
+| **RC4 keys** | Yes (inline + file) | — | — | — | Yes | — | — | — |
+| **Ticket files (ccache/kirbi)** | Yes (auto-detect) | — | — | ccache | ccache | — | — | — |
+| **User:secret paired files** | user:pass, user:hash, user:key | user:pass (bruteforce mode) | — | — | — | — | — | — |
+| **Username enumeration** | Yes (Kerberos, no login attempt) | Yes (Kerberos, no login attempt) | LDAP + Kerberos | RID brute, LDAP | LDAP (smart mode) | Yes (Kerberos) | — | — |
+| **ASREProastable detection** | Yes (flagged during enum) | Yes (AS-REP hash capture) | — | Yes (dedicated flag) | — | — | — | — |
+| **Clock skew handling** | Stops execution with server time | Logs warning, continues | — | — | Logs warning | — | — | — |
+| **Account status detection** | Disabled, expired, locked, revoked, not-yet-valid, null-key | Locked, expired | Disabled, locked, expired | Disabled, expired, locked, must-change, restriction | Disabled, expired, must-change | — | Disabled (LDAP filter) | — |
+| **Per-user skip on error** | Yes (unknown, revoked, wrong realm) | — | — | — | — | — | — | — |
+| **Delay / jitter** | Yes / Yes | Delay only (forces single-thread) | Yes / Yes | Jitter only | Delay only | — | — | Stealth mode (0.5–1.5s) |
+| **Max lockout safety** | `--max-lockouts` (consecutive revoked) | `--safe` (abort on any lockout) | Per-user threshold + policy query | Global, per-user, per-host fail limits | Policy query + PSO + badPwdCount | — | badPwdCount + threshold + PSO | Threshold - 3 buffer |
+| **Machine-parseable output** | `domain/user:secret@type` | — | JSON, CSV, TXT | Database + log file | — | — | — | CSV |
+| **File output** | `-o` flag | `-o` flag + `--hash-file` | `-o` with format choice | `--log` + database | Not implemented (TODO) | — | — | `--output` CSV |
+| **Verbosity levels** | 3 (`-v` / `-vv` / `-vvv`) | 1 (`-v`) | 1 (`-v`) | 1 (`-v`) | 2 (`-v` / `-vv`) | — | 2 (`-v` / `-vv`) | Quiet mode only |
+| **Post-auth actions** | **None** (by design) | None | None | Extensive (shares, SAM, NTDS, exec, BloodHound) | Domain enum, local admin check | None | BloodHound mark-as-owned | None |
+| **Parallel execution** | Sequential | 10 goroutines (default) | Sequential | 256 threads (default) | Sequential | Sequential | Sequential | Sequential |
+| **Session resume** | — | — | `--save-state` / `--resume` | Database-driven | — | — | — | `spray_state.json` |
+| **Proxy support** | — | — | SOCKS4/5, HTTP, SSH tunnels | — | — | — | — | — |
+| **BloodHound integration** | — | — | — | Yes (collection module) | Neo4j: mark-as-owned + path-to-DA | — | Neo4j: mark-as-owned + path-to-DA | — |
+| **AD policy query** | — | — | Lockout policy + recommendations | — | Lockout policy + PSO | — | Lockout policy + PSO | — |
+| **Test suite** | pytest (unit + integration) | — | — | E2E + database tests | Smoke test only | — | Smoke test only | — |
+
+**Key differentiators:**
+
+- **CredWolf vs kerbrute** — kerbrute is the closest competitor: fast (Go, goroutines), Kerberos-focused, and widely adopted. However, it only supports passwords — no hashes, no AES/RC4 keys, no ticket files. It has no NTLM support (SMB/LDAP/LDAPS), no paired user:hash or user:key files, no jitter, and no machine-parseable output format. Its `--delay` forces single-threaded execution. CredWolf trades parallelism (sequential, for now) for protocol depth, secret type coverage, and deterministic error handling.
+- **Secret type coverage** — CredWolf is the only tool that supports passwords, NT hashes, RC4 keys, AES128 keys, AES256 keys, and ticket files (ccache/kirbi) with auto-detection, all in a single binary. kerbrute, ADSpray, and pyKerbrute only support passwords (kerbrute) or passwords and NT hashes (ADSpray, pyKerbrute). SmartSpray and SprayHound only support passwords.
+- **Credential combination depth** — 88+ permutations of user sources, secret sources, etypes, and transports. No other tool covers the full matrix of NTLM and Kerberos authentication scenarios.
+- **Safety-first error model** — CredWolf stops on clock skew (kerbrute logs a warning and continues, risking false negatives), skips users after `KDC_ERR_C_PRINCIPAL_UNKNOWN` / `CLIENT_REVOKED` (kerbrute and others keep trying), and caches AES salts (avoiding extra requests). Each wrong password maps to exactly 1 failed login — no hidden counter inflation.
+- **No post-auth scope creep** — tools like NetExec, smartbrute, and SprayHound bundle post-exploitation (share enumeration, SAM dump, BloodHound). This makes them harder to audit, heavier to deploy, and noisier on the wire. CredWolf validates credentials and nothing else.
+- **Modern Python** — Python 3.11+ with type annotations, pytest coverage, and CI. pyKerbrute requires Python 2 and PyCrypto (unmaintained). smartbrute self-describes as "more PoC than stable tool".
 
 ## Credential combination matrix
 
@@ -659,15 +691,6 @@ make distclean                 # clean + remove .venv
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
-
-## Known limitations
-
-- Kerberos over UDP may produce `KRB_ERR_RESPONSE_TOO_BIG` for some users. Use `--transport tcp` as a workaround.
-- Clock skew between the client and KDC causes `KRB_AP_ERR_SKEW`. Sync your system clock before running Kerberos authentication.
-- AES128 and RC4 Kerberos keys share the same hex length (32 chars). Auto-detection in `--user-key-file` defaults to RC4; use `-e aes128` to override.
-- LDAPS transport requires the domain controller to have a valid TLS certificate configuration. Connection resets typically indicate LDAPS is not available on the target.
-- LM hashes are accepted as input (for compatibility with hash dumps) but are not used for authentication or shown in output. Only the NT hash portion is used.
-- No ability to query the domain's lockout policy or fine-grained password policies (PSOs) directly. Operators must determine safe thresholds externally.
 
 ## Roadmap
 
