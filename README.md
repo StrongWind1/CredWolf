@@ -8,6 +8,40 @@ Credential validation tool for Active Directory Domain Services.
 
 CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos keys, or ticket files) against a domain controller and reports which credentials are valid. It also supports username enumeration via Kerberos to discover valid AD accounts without causing login attempts. It is designed for authorized penetration testing, red team engagements, and security audits where you need to verify whether recovered or suspected credentials are active.
 
+## Table of contents
+
+- [Features](#features)
+- [How it differs from other tools](#how-it-differs-from-other-tools)
+- [Supported protocols](#supported-protocols)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [CLI reference](#cli-reference)
+- [Output format](#output-format)
+- [Usage examples](#usage-examples)
+- [Hash and key formats](#hash-and-key-formats)
+- [Working with secretsdump output](#working-with-secretsdump-output)
+- [Error handling](#error-handling)
+- [Kerberos authentication flow and account lockout](#kerberos-authentication-flow-and-account-lockout)
+- [Credential combination matrix](#credential-combination-matrix)
+- [Development](#development)
+- [Known limitations](#known-limitations)
+- [Roadmap](#roadmap)
+- [Disclaimer](#disclaimer)
+- [Credits](#credits)
+- [License](#license)
+
+## Features
+
+- **NTLM + Kerberos** — validate credentials over SMB, LDAP, LDAPS, and Kerberos pre-authentication (UDP/TCP)
+- **Every secret type** — passwords, NT hashes (bare + LM:NT), RC4 keys, AES128 keys, AES256 keys, and ticket files (ccache/kirbi with auto-detection)
+- **Username enumeration** — discover valid AD accounts via Kerberos without triggering login failures or lockouts; ASREProastable accounts flagged automatically
+- **88+ credential permutations** — every meaningful combination of user sources, secret sources, encryption types, and transports
+- **Paired files** — user:password, user:hash, and user:key files for pre-matched credential testing
+- **Machine-parseable output** — `domain/user:secret@type` format, easy to grep or pipe
+- **Safety-first errors** — clock skew stops execution immediately, per-user skip on unknown/revoked principals, detailed account status detection (disabled, expired, locked, revoked, not-yet-valid, null-key)
+- **Rate limiting** — `--delay`, `--jitter`, and `--max-lockouts` to avoid triggering lockout policies
+- **Validation only** — no post-authentication activity by design
+
 ## How it differs from other tools
 
 Most credential testing tools are built around exploitation workflows — they authenticate and then enumerate shares, dump SAM, exec commands, etc. CredWolf does one thing: **validate credentials**. It does not attempt any post-authentication activity.
@@ -68,11 +102,38 @@ Most credential testing tools are built around exploitation workflows — they a
 
 ## Installation
 
-Requires Python 3.11+. Install with [uv](https://docs.astral.sh/uv/):
+Requires Python 3.11+.
+
+### From PyPI
 
 ```bash
+pip install credwolf
+# or
+pipx install credwolf
+# or
+uv tool install credwolf
+```
+
+### From source
+
+```bash
+pip install git+https://github.com/StrongWind1/CredWolf
+# or
+pipx install git+https://github.com/StrongWind1/CredWolf
+# or
 uv tool install git+https://github.com/StrongWind1/CredWolf
 ```
+
+### Docker
+
+```bash
+git clone https://github.com/StrongWind1/CredWolf.git
+cd CredWolf
+docker build -t credwolf .
+docker run --rm --network host credwolf -d evil.corp ntlm --dc-ip 10.0.0.1 -u Administrator -p 'Password1!'
+```
+
+The `cw` command is also installed as a shorthand for `credwolf`.
 
 ## Quick start
 
@@ -579,13 +640,25 @@ Key files pool into a single list and iterate per user. 8+ combinations x 2 tran
 ## Development
 
 ```bash
+git clone https://github.com/StrongWind1/CredWolf.git
+cd CredWolf
 uv sync                        # install dev dependencies
-uv run pytest                  # run tests
-uv run ruff check              # lint
-uv run ruff format --check     # format check
-uv run ty check                # type check
-uv build                       # build
 ```
+
+```bash
+make install-dev               # install dev dependencies (uv sync)
+make check                     # run lint + typecheck + tests
+make test                      # run tests only
+make lint                      # ruff check + format check
+make typecheck                 # ty check
+make build                     # build distribution
+make install                   # install locally (uv pip install .)
+make install-tool              # install as uv tool
+make clean                     # remove build artifacts and caches
+make distclean                 # clean + remove .venv
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ## Known limitations
 
@@ -605,6 +678,10 @@ uv build                       # build
 - **Proxy / SOCKS support** — route connections through SOCKS4/5 or HTTP proxies to support pivoting through compromised hosts. ADSpray already supports this via PySocks.
 - **`--realm` override** — allow the Kerberos realm to be set independently of the domain name (currently force-uppercased from `-d`). Would enable testing against non-standard realm configurations.
 - **User randomization** — `--randomize` flag to shuffle the user list order per password, reducing the chance of sequential lockouts on adjacent accounts.
+
+## Disclaimer
+
+CredWolf is intended for authorized penetration testing, red team engagements, and security audits only. You must have explicit written permission from the system owner before testing credentials against any Active Directory environment. Unauthorized access to computer systems is illegal. The authors are not responsible for any misuse or damage caused by this tool.
 
 ## Credits
 
