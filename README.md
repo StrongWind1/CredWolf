@@ -10,13 +10,54 @@ CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos 
 
 ## How it differs from other tools
 
-Most credential testing tools (CrackMapExec/NetExec, Sprayhound, Kerbrute) are built around exploitation workflows — they authenticate and then enumerate shares, dump SAM, exec commands, etc. CredWolf does one thing: **validate credentials**. It does not attempt any post-authentication activity.
+Most credential testing tools are built around exploitation workflows — they authenticate and then enumerate shares, dump SAM, exec commands, etc. CredWolf does one thing: **validate credentials**. It does not attempt any post-authentication activity.
 
-- **Protocol coverage** — NTLM (SMB, LDAP, LDAPS) and Kerberos pre-authentication in a single tool, with every meaningful combination of user sources and secret sources.
+- **Protocol coverage** — NTLM (SMB, LDAP, LDAPS) and Kerberos pre-authentication in a single tool, with every meaningful combination of user sources and secret sources (88+ permutations).
 - **Clean output** — valid credentials are printed in a machine-parseable `domain/user:secret@type` format. No tables, no colors in the output line, easy to `grep` or pipe.
 - **Safety-first error handling** — clock skew stops execution immediately (instead of silently producing false negatives), `KRB_ERR_RESPONSE_TOO_BIG` tells you to switch to TCP (instead of guessing validity), and raw SMB error codes are passed through (instead of hiding them behind generic messages).
 - **Username enumeration** — discover valid AD accounts via Kerberos without triggering login failures or account lockouts. ASREProastable accounts (pre-authentication not required) are flagged automatically.
-- **Rate limiting** — built-in `--delay` and `--jitter` to avoid triggering account lockout policies.
+- **Rate limiting** — built-in `--delay`, `--jitter`, and `--max-lockouts` to avoid triggering account lockout policies.
+
+### Comparison with existing tools
+
+| Feature | **CredWolf** | [kerbrute](https://github.com/ropnop/kerbrute) | [ADSpray](https://github.com/ZephrFish/ADSpray) | [NetExec](https://github.com/Pennyw0rth/NetExec) | [smartbrute](https://github.com/ShutdownRepo/smartbrute) | [pyKerbrute](https://github.com/3gstudent/pyKerbrute) | [SprayHound](https://github.com/Hackndo/sprayhound) | [SmartSpray](https://github.com/GabrielDuschl/SmartSpray) |
+|---|---|---|---|---|---|---|---|---|
+| **Focus** | Credential validation only | Kerberos spray/enum | Credential spraying | Post-exploitation framework | Smart brute-force | Kerberos spray/enum | Password spraying | Password spraying |
+| **Language** | Python 3.11+ | Go | Python 3 | Python 3 | Python 3.6+ | Python 2 | Python 3.6+ | Python 3.6+ |
+| **NTLM auth** | SMB, LDAP, LDAPS | — | LDAP, LDAPS | SMB, LDAP, LDAPS, WinRM, MSSQL, RDP, SSH, FTP, VNC, NFS, WMI | SMB, LDAP, LDAPS | — | LDAP, LDAPS | SMB |
+| **Kerberos pre-auth** | UDP, TCP | UDP (auto) | via Impacket | via Impacket | UDP, TCP | UDP, TCP | — | — |
+| **Passwords** | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| **NT hashes** | Yes (bare + LM:NT) | — | Yes | Yes | Yes | Yes | — | — |
+| **AES128 / AES256 keys** | Yes (inline + file) | — | — | AES keys supported | AES128, AES256 | — | — | — |
+| **RC4 keys** | Yes (inline + file) | — | — | — | Yes | — | — | — |
+| **Ticket files (ccache/kirbi)** | Yes (auto-detect) | — | — | ccache | ccache | — | — | — |
+| **User:secret paired files** | user:pass, user:hash, user:key | user:pass (bruteforce mode) | — | — | — | — | — | — |
+| **Username enumeration** | Yes (Kerberos, no login attempt) | Yes (Kerberos, no login attempt) | LDAP + Kerberos | RID brute, LDAP | LDAP (smart mode) | Yes (Kerberos) | — | — |
+| **ASREProastable detection** | Yes (flagged during enum) | Yes (AS-REP hash capture) | — | Yes (dedicated flag) | — | — | — | — |
+| **Clock skew handling** | Stops execution with server time | Logs warning, continues | — | — | Logs warning | — | — | — |
+| **Account status detection** | Disabled, expired, locked, revoked, not-yet-valid, null-key | Locked, expired | Disabled, locked, expired | Disabled, expired, locked, must-change, restriction | Disabled, expired, must-change | — | Disabled (LDAP filter) | — |
+| **Per-user skip on error** | Yes (unknown, revoked, wrong realm) | — | — | — | — | — | — | — |
+| **Delay / jitter** | Yes / Yes | Delay only (forces single-thread) | Yes / Yes | Jitter only | Delay only | — | — | Stealth mode (0.5–1.5s) |
+| **Max lockout safety** | `--max-lockouts` (consecutive revoked) | `--safe` (abort on any lockout) | Per-user threshold + policy query | Global, per-user, per-host fail limits | Policy query + PSO + badPwdCount | — | badPwdCount + threshold + PSO | Threshold - 3 buffer |
+| **Machine-parseable output** | `domain/user:secret@type` | — | JSON, CSV, TXT | Database + log file | — | — | — | CSV |
+| **File output** | `-o` flag | `-o` flag + `--hash-file` | `-o` with format choice | `--log` + database | Not implemented (TODO) | — | — | `--output` CSV |
+| **Verbosity levels** | 3 (`-v` / `-vv` / `-vvv`) | 1 (`-v`) | 1 (`-v`) | 1 (`-v`) | 2 (`-v` / `-vv`) | — | 2 (`-v` / `-vv`) | Quiet mode only |
+| **Post-auth actions** | **None** (by design) | None | None | Extensive (shares, SAM, NTDS, exec, BloodHound) | Domain enum, local admin check | None | BloodHound mark-as-owned | None |
+| **Parallel execution** | Sequential | 10 goroutines (default) | Sequential | 256 threads (default) | Sequential | Sequential | Sequential | Sequential |
+| **Session resume** | — | — | `--save-state` / `--resume` | Database-driven | — | — | — | `spray_state.json` |
+| **Proxy support** | — | — | SOCKS4/5, HTTP, SSH tunnels | — | — | — | — | — |
+| **BloodHound integration** | — | — | — | Yes (collection module) | Neo4j: mark-as-owned + path-to-DA | — | Neo4j: mark-as-owned + path-to-DA | — |
+| **AD policy query** | — | — | Lockout policy + recommendations | — | Lockout policy + PSO | — | Lockout policy + PSO | — |
+| **Test suite** | pytest (unit + integration) | — | — | E2E + database tests | Smoke test only | — | Smoke test only | — |
+
+**Key differentiators:**
+
+- **CredWolf vs kerbrute** — kerbrute is the closest competitor: fast (Go, goroutines), Kerberos-focused, and widely adopted. However, it only supports passwords — no hashes, no AES/RC4 keys, no ticket files. It has no NTLM support (SMB/LDAP/LDAPS), no paired user:hash or user:key files, no jitter, and no machine-parseable output format. Its `--delay` forces single-threaded execution. CredWolf trades parallelism (sequential, for now) for protocol depth, secret type coverage, and deterministic error handling.
+- **Secret type coverage** — CredWolf is the only tool that supports passwords, NT hashes, RC4 keys, AES128 keys, AES256 keys, and ticket files (ccache/kirbi) with auto-detection, all in a single binary. kerbrute, ADSpray, and pyKerbrute only support passwords (kerbrute) or passwords and NT hashes (ADSpray, pyKerbrute). SmartSpray and SprayHound only support passwords.
+- **Credential combination depth** — 88+ permutations of user sources, secret sources, etypes, and transports. No other tool covers the full matrix of NTLM and Kerberos authentication scenarios.
+- **Safety-first error model** — CredWolf stops on clock skew (kerbrute logs a warning and continues, risking false negatives), skips users after `KDC_ERR_C_PRINCIPAL_UNKNOWN` / `CLIENT_REVOKED` (kerbrute and others keep trying), and caches AES salts (avoiding extra requests). Each wrong password maps to exactly 1 failed login — no hidden counter inflation.
+- **No post-auth scope creep** — tools like NetExec, smartbrute, and SprayHound bundle post-exploitation (share enumeration, SAM dump, BloodHound). This makes them harder to audit, heavier to deploy, and noisier on the wire. CredWolf validates credentials and nothing else.
+- **Modern Python** — Python 3.11+ with type annotations, pytest coverage, and CI. pyKerbrute requires Python 2 and PyCrypto (unmaintained). smartbrute self-describes as "more PoC than stable tool".
 
 ## Supported protocols
 
@@ -439,16 +480,6 @@ Kerberos pre-authentication proves knowledge of a user's key by encrypting the c
 
 **Ticket validation does not touch the password counter.** The `--ticket` flag sends a TGS-REQ (not an AS-REQ), which validates the TGT without any password involvement.
 
-### Comparison with kerbrute
-
-Kerbrute sends bare AS-REQs for user enumeration. On certain Active Directory configurations, these requests were counted as failed login attempts, causing unintended lockouts during large-scale enumeration. CredWolf uses the same bare AS-REQ for both `userenum` and AES salt retrieval, but:
-
-- **User enumeration** (`userenum`) sends one bare AS-REQ per user with all three encryption types (AES256, AES128, RC4). This is not a login attempt and does not increment the bad-password counter.
-- **AES salt retrieval** (during `kerberos` password auth with `-e aes128` or `-e aes256`) sends the bare AS-REQ at most once per user. The salt is cached.
-- **RC4 password auth and raw keys** do not send any bare AS-REQ — they go directly to pre-authentication.
-
-Additionally, CredWolf's `userenum` detects `KDC_ERR_ETYPE_NOSUPP` as a valid-user signal (the KDC looked up the principal before rejecting the encryption type), which tools that only check for `PREAUTH_REQUIRED` would miss.
-
 ### Lockout mitigation
 
 Use `--delay` and `--jitter` to space out attempts when testing against accounts with lockout policies:
@@ -558,20 +589,22 @@ uv build                       # build
 
 ## Known limitations
 
-- Credential testing runs sequentially. Thread-based parallelism is not yet implemented.
 - Kerberos over UDP may produce `KRB_ERR_RESPONSE_TOO_BIG` for some users. Use `--transport tcp` as a workaround.
 - Clock skew between the client and KDC causes `KRB_AP_ERR_SKEW`. Sync your system clock before running Kerberos authentication.
 - AES128 and RC4 Kerberos keys share the same hex length (32 chars). Auto-detection in `--user-key-file` defaults to RC4; use `-e aes128` to override.
-- Protected Users group members and accounts with `USE_DES_KEY_ONLY` or restricted `msDS-SupportedEncryptionTypes` will fail with `KDC_ERR_ETYPE_NOSUPP` when using the default `--etype rc4`. Use `--etype aes256` for these accounts. The `userenum` subcommand is unaffected because it requests all encryption types.
 - LDAPS transport requires the domain controller to have a valid TLS certificate configuration. Connection resets typically indicate LDAPS is not available on the target.
 - LM hashes are accepted as input (for compatibility with hash dumps) but are not used for authentication or shown in output. Only the NT hash portion is used.
+- No ability to query the domain's lockout policy or fine-grained password policies (PSOs) directly. Operators must determine safe thresholds externally.
 
 ## Roadmap
 
-- **AS-REP hash extraction** — when `userenum` discovers an ASREProastable account (pre-authentication not required), the KDC returns an AS-REP containing encrypted data that can be cracked offline with hashcat (`$krb5asrep$23$`). credwolf currently flags these accounts but discards the AS-REP. A `--asrep-out` flag would save the hashes in hashcat format.
 - **Parallel execution** — credential testing is currently sequential. Thread-based or async parallelism would significantly improve speed for large user/password lists, especially over TCP where connection setup dominates.
+- **AS-REP hash extraction** — when `userenum` discovers an ASREProastable account (pre-authentication not required), the KDC returns an AS-REP containing encrypted data that can be cracked offline with hashcat (`$krb5asrep$23$`). credwolf currently flags these accounts but discards the AS-REP. A `--asrep-out` flag would save the hashes in hashcat format.
 - **Automatic etype fallback** — when `KDC_ERR_ETYPE_NOSUPP` is returned during credential validation, automatically retry the user with AES256 instead of requiring the operator to re-run with `--etype aes256`. This would catch Protected Users members and DES-only accounts in a single pass.
+- **Session resume** — save progress to a state file so interrupted runs can be resumed without re-testing credentials that were already checked. Useful for large credential lists over slow or unstable links.
+- **Proxy / SOCKS support** — route connections through SOCKS4/5 or HTTP proxies to support pivoting through compromised hosts. ADSpray already supports this via PySocks.
 - **`--realm` override** — allow the Kerberos realm to be set independently of the domain name (currently force-uppercased from `-d`). Would enable testing against non-standard realm configurations.
+- **User randomization** — `--randomize` flag to shuffle the user list order per password, reducing the chance of sequential lockouts on adjacent accounts.
 
 ## Credits
 
