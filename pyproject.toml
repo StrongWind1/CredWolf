@@ -1,0 +1,100 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "credwolf"
+version = "1.0.0"
+description = "Credential validation tool for Active Directory Domain Services."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11,<3.15"
+authors = [
+    {name = "StrongWind1"},
+]
+classifiers = [
+    "Environment :: Console",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Security",
+]
+dependencies = [
+    "pyasn1>=0.5",
+    "impacket>=0.12",
+]
+
+[project.urls]
+Repository = "https://github.com/StrongWind1/CredWolf"
+
+[project.scripts]
+credwolf = "credwolf.cli:main"
+cw = "credwolf.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["credwolf"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.11",
+    "ty>=0.0.1a7",
+    "pre-commit>=4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 320
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "E501",    # line length — disabled
+    "D",       # pydocstyle — disabled
+    "T20",     # print statements — CLI tool
+    "COM812",  # trailing comma — formatter conflict
+    "ISC001",  # string concat — formatter conflict
+    "G004",    # f-string logging — custom logger, readability wins
+    "ANN401",  # Any — impacket is untyped
+    "BLE001",  # broad except — impacket exceptions undocumented
+    "TRY400",  # logging.exception — not using stdlib logging
+    "PLR0913", # too many args — protocol methods need them
+    "PLR0912", # too many branches — protocol state machines
+    "PLR0915", # too many statements — protocol methods
+    "PLR0911", # too many returns — protocol methods
+    "C901",    # complexity — protocol methods
+    "S105",    # hardcoded password — false positives on label strings
+    "S106",    # hardcoded password in arg — false positives on secret_type labels
+    "SIM108",  # ternary — readability loss on multi-arg calls
+    "N802",    # uppercase in function name — test names match CLI flags
+    "EM101",   # string literal in exception — not a library
+    "TRY003",  # long exception message — not a library
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",    # assert — pytest idiom
+    "S603",    # subprocess — test-only
+    "PLR2004", # magic values — test assertions
+    "PLC0415", # late imports — smoke tests
+    "ANN",     # annotations — pytest fixtures / test helpers
+    "SLF001",  # private access — testing internal methods
+]
+
+[tool.ty.rules]
+all = "error"
+
+[tool.ty.environment]
+python-version = "3.11"
+
+[[tool.ty.overrides]]
+include = ["tests/**"]
+
+[tool.ty.overrides.rules]
+all = "ignore"
