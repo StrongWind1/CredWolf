@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://strongwind1.github.io/CredWolf/"><img src="docs/assets/credwolf_banner.png" alt="CredWolf" width="800"></a>
+  <a href="https://strongwind1.github.io/CredWolf/"><img src="https://raw.githubusercontent.com/StrongWind1/CredWolf/main/docs/assets/credwolf_banner.png" alt="CredWolf" width="800"></a>
 </p>
 
 <p align="center">
