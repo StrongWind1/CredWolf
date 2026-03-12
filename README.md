@@ -1,8 +1,12 @@
-# CredWolf
+<p align="center">
+  <img src="assets/credwolf_banner.png" alt="CredWolf" width="800">
+</p>
 
-[![CI](https://github.com/StrongWind1/CredWolf/actions/workflows/ci.yml/badge.svg)](https://github.com/StrongWind1/CredWolf/actions/workflows/ci.yml)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+<p align="center">
+  <a href="https://github.com/StrongWind1/CredWolf/actions/workflows/ci.yml"><img src="https://github.com/StrongWind1/CredWolf/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg" alt="Python 3.11+"></a>
+  <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+</p>
 
 Credential validation tool for Active Directory Domain Services.
 

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/credwolf_icon.png" alt="CredWolf" width="400">
+</p>
+
 # Contributing to CredWolf
 
 ## Getting started
