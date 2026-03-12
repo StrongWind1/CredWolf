@@ -102,6 +102,33 @@
   color: #ffffffb3;
 }
 
+/* ---------- Header title — make site name clickable via logo link ---------- */
+
+.md-header__title {
+  cursor: pointer;
+  pointer-events: none;
+}
+
+.md-header__ellipsis {
+  pointer-events: auto;
+}
+
+/* Wrap the logo link over the adjacent title text */
+.md-header__button.md-logo {
+  position: relative;
+  z-index: 1;
+}
+
+.md-header__button.md-logo::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -200px;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+}
+
 /* ---------- Light mode ---------- */
 
 [data-md-color-scheme="default"] {

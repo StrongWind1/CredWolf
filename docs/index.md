@@ -31,6 +31,10 @@ CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos 
 
 ```bash
 pip install credwolf
+# or
+pipx install credwolf
+# or
+uv tool install credwolf
 ```
 
 ```bash

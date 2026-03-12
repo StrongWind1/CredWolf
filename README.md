@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/credwolf_banner.png" alt="CredWolf" width="800">
+  <a href="https://strongwind1.github.io/CredWolf/"><img src="docs/assets/credwolf_banner.png" alt="CredWolf" width="800"></a>
 </p>
 
 <p align="center">
@@ -9,9 +9,20 @@
   <a href="https://strongwind1.github.io/CredWolf/"><img src="https://img.shields.io/badge/docs-mkdocs-blue.svg" alt="Docs"></a>
 </p>
 
+<p align="center">
+  <a href="https://strongwind1.github.io/CredWolf/getting-started/installation/">Installation</a> &bull;
+  <a href="https://strongwind1.github.io/CredWolf/getting-started/quick-start/">Quick start</a> &bull;
+  <a href="https://strongwind1.github.io/CredWolf/usage/ntlm/">Usage</a> &bull;
+  <a href="https://strongwind1.github.io/CredWolf/reference/cli/">CLI reference</a> &bull;
+  <a href="https://strongwind1.github.io/CredWolf/">Documentation</a> &bull;
+  <a href="https://strongwind1.github.io/CredWolf/contributing/">Contributing</a>
+</p>
+
 Credential validation tool for Active Directory Domain Services.
 
 CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos keys, or ticket files) against a domain controller and reports which credentials are valid. It also supports username enumeration via Kerberos to discover valid AD accounts without causing login attempts. It is designed for authorized penetration testing, red team engagements, and security audits where you need to verify whether recovered or suspected credentials are active.
+
+> **Warning:** This tool is intended for authorized security testing only. You must have explicit written permission from the system owner before testing credentials against any Active Directory environment. Unauthorized access to computer systems is illegal.
 
 **[Full documentation](https://strongwind1.github.io/CredWolf/)**
 
@@ -37,6 +48,8 @@ pipx install credwolf
 # or
 uv tool install credwolf
 ```
+
+The `cw` command is also installed as a shorthand for `credwolf`.
 
 See the [installation guide](https://strongwind1.github.io/CredWolf/getting-started/installation/) for source and Docker options.
 
@@ -81,10 +94,6 @@ make check                     # run lint + typecheck + tests
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
-
-## Disclaimer
-
-CredWolf is intended for authorized penetration testing, red team engagements, and security audits only. You must have explicit written permission from the system owner before testing credentials against any Active Directory environment. Unauthorized access to computer systems is illegal. The authors are not responsible for any misuse or damage caused by this tool.
 
 ## Credits
 
