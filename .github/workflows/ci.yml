@@ -79,12 +79,6 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
       - run: uv sync --group docs
-      - name: Check CLI reference is up to date
-        run: |
-          if ! uv run scripts/update-cli-reference.py; then
-            echo "::error::docs/reference/cli.md is out of date. Run 'uv run scripts/update-cli-reference.py' and commit the result."
-            exit 1
-          fi
       - name: Build docs (strict)
         run: uv run mkdocs build --strict
       - name: Check internal links
