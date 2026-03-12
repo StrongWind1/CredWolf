@@ -1,4 +1,4 @@
-# credwolf
+# CredWolf
 
 [![CI](https://github.com/StrongWind1/CredWolf/actions/workflows/ci.yml/badge.svg)](https://github.com/StrongWind1/CredWolf/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg)](https://www.python.org/)
@@ -6,11 +6,11 @@
 
 Credential validation tool for Active Directory Domain Services.
 
-credwolf tests username and secret combinations (passwords, NT hashes, Kerberos keys, or ticket files) against a domain controller and reports which credentials are valid. It also supports username enumeration via Kerberos to discover valid AD accounts without causing login attempts. It is designed for authorized penetration testing, red team engagements, and security audits where you need to verify whether recovered or suspected credentials are active.
+CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos keys, or ticket files) against a domain controller and reports which credentials are valid. It also supports username enumeration via Kerberos to discover valid AD accounts without causing login attempts. It is designed for authorized penetration testing, red team engagements, and security audits where you need to verify whether recovered or suspected credentials are active.
 
 ## How it differs from other tools
 
-Most credential testing tools (CrackMapExec/NetExec, Sprayhound, Kerbrute) are built around exploitation workflows — they authenticate and then enumerate shares, dump SAM, exec commands, etc. credwolf does one thing: **validate credentials**. It does not attempt any post-authentication activity.
+Most credential testing tools (CrackMapExec/NetExec, Sprayhound, Kerbrute) are built around exploitation workflows — they authenticate and then enumerate shares, dump SAM, exec commands, etc. CredWolf does one thing: **validate credentials**. It does not attempt any post-authentication activity.
 
 - **Protocol coverage** — NTLM (SMB, LDAP, LDAPS) and Kerberos pre-authentication in a single tool, with every meaningful combination of user sources and secret sources.
 - **Clean output** — valid credentials are printed in a machine-parseable `domain/user:secret@type` format. No tables, no colors in the output line, easy to `grep` or pipe.
@@ -433,7 +433,7 @@ During `userenum`, only `KDC_ERR_C_PRINCIPAL_UNKNOWN` means the user does not ex
 
 Kerberos pre-authentication proves knowledge of a user's key by encrypting the current timestamp with it. The KDC decrypts the timestamp — if it succeeds, the credential is valid (AS-REP returned). If it fails, `KDC_ERR_PREAUTH_FAILED` is returned and the bad-password counter increments by one.
 
-**AES salt retrieval is harmless.** AES key derivation requires a per-user salt from the KDC. credwolf obtains this by sending an AS-REQ with no authentication data. The KDC responds with `KDC_ERR_PREAUTH_REQUIRED` and the salt — this is standard protocol behavior, not a login attempt. The salt is cached per user, so this only happens once regardless of how many passwords are tested against the same user.
+**AES salt retrieval is harmless.** AES key derivation requires a per-user salt from the KDC. CredWolf obtains this by sending an AS-REQ with no authentication data. The KDC responds with `KDC_ERR_PREAUTH_REQUIRED` and the salt — this is standard protocol behavior, not a login attempt. The salt is cached per user, so this only happens once regardless of how many passwords are tested against the same user.
 
 **Each wrong password/key = exactly 1 failed login.** The mapping is 1:1 — no hidden extra requests that inflate the bad-password counter. This is the same as typing a wrong password interactively.
 
@@ -441,13 +441,13 @@ Kerberos pre-authentication proves knowledge of a user's key by encrypting the c
 
 ### Comparison with kerbrute
 
-Kerbrute sends bare AS-REQs for user enumeration. On certain Active Directory configurations, these requests were counted as failed login attempts, causing unintended lockouts during large-scale enumeration. credwolf uses the same bare AS-REQ for both `userenum` and AES salt retrieval, but:
+Kerbrute sends bare AS-REQs for user enumeration. On certain Active Directory configurations, these requests were counted as failed login attempts, causing unintended lockouts during large-scale enumeration. CredWolf uses the same bare AS-REQ for both `userenum` and AES salt retrieval, but:
 
 - **User enumeration** (`userenum`) sends one bare AS-REQ per user with all three encryption types (AES256, AES128, RC4). This is not a login attempt and does not increment the bad-password counter.
 - **AES salt retrieval** (during `kerberos` password auth with `-e aes128` or `-e aes256`) sends the bare AS-REQ at most once per user. The salt is cached.
 - **RC4 password auth and raw keys** do not send any bare AS-REQ — they go directly to pre-authentication.
 
-Additionally, credwolf's `userenum` detects `KDC_ERR_ETYPE_NOSUPP` as a valid-user signal (the KDC looked up the principal before rejecting the encryption type), which tools that only check for `PREAUTH_REQUIRED` would miss.
+Additionally, CredWolf's `userenum` detects `KDC_ERR_ETYPE_NOSUPP` as a valid-user signal (the KDC looked up the principal before rejecting the encryption type), which tools that only check for `PREAUTH_REQUIRED` would miss.
 
 ### Lockout mitigation
 
@@ -464,7 +464,7 @@ credwolf --stop-on-success -d evil.corp kerberos --kdc-ip 10.0.0.1 -U users.txt 
 credwolf --max-lockouts 3 -d evil.corp kerberos --kdc-ip 10.0.0.1 -U users.txt -P passwords.txt --transport tcp
 ```
 
-**Note on `KDC_ERR_CLIENT_REVOKED`:** This Kerberos error code does not distinguish between accounts that are disabled, expired, locked out, or outside their allowed logon hours. credwolf reports all four possibilities in the warning message. The `--max-lockouts` flag counts consecutive `CLIENT_REVOKED` responses — if your scan triggers N in a row, it is likely that the scan itself is causing lockouts rather than encountering pre-existing disabled/expired accounts. To determine the specific cause, test the affected accounts over NTLM (`credwolf ntlm`).
+**Note on `KDC_ERR_CLIENT_REVOKED`:** This Kerberos error code does not distinguish between accounts that are disabled, expired, locked out, or outside their allowed logon hours. CredWolf reports all four possibilities in the warning message. The `--max-lockouts` flag counts consecutive `CLIENT_REVOKED` responses — if your scan triggers N in a row, it is likely that the scan itself is causing lockouts rather than encountering pre-existing disabled/expired accounts. To determine the specific cause, test the affected accounts over NTLM (`credwolf ntlm`).
 
 ## Credential combination matrix
 
