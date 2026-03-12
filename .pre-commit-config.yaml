@@ -12,3 +12,11 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-toml
+  - repo: local
+    hooks:
+      - id: update-cli-reference
+        name: update CLI reference docs
+        entry: uv run scripts/update-cli-reference.py
+        language: system
+        pass_filenames: false
+        files: ^credwolf/cli\.py$

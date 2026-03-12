@@ -27,6 +27,7 @@ Thumbs.db
 .ruff_cache/
 .pytest_cache/
 .mypy_cache/
+.ty/
 .claude/
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,python,visualstudiocode,linux,windows

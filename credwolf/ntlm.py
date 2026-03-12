@@ -71,7 +71,7 @@ class NtlmHandler:
 
         try:
             self.logger.debug(f"Connecting to smb://{target}:445")
-            smb_conn = SMBConnection(target, target, None, "445", timeout=self._timeout)
+            smb_conn = SMBConnection(target, target, None, 445, timeout=self._timeout)
         except OSError as exc:
             self.logger.error(f"Cannot connect to smb://{target}:445 — {exc}")
             return AuthResult(success=False, details="connection failed")

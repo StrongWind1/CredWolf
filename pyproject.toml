@@ -29,6 +29,7 @@ dependencies = [
 
 [project.urls]
 Repository = "https://github.com/StrongWind1/CredWolf"
+Documentation = "https://strongwind1.github.io/CredWolf/"
 Changelog = "https://github.com/StrongWind1/CredWolf/blob/main/CHANGELOG.md"
 Issues = "https://github.com/StrongWind1/CredWolf/issues"
 
@@ -45,6 +46,9 @@ dev = [
     "ruff>=0.11",
     "ty>=0.0.1a7",
     "pre-commit>=4.0",
+]
+docs = [
+    "mkdocs-material>=9.0",
 ]
 
 [tool.pytest.ini_options]
@@ -87,6 +91,14 @@ ignore = [
     "PLC0415", # late imports — smoke tests
     "ANN",     # annotations — pytest fixtures / test helpers
     "SLF001",  # private access — testing internal methods
+]
+"scripts/**" = [
+    "S603",    # subprocess — scripts call uv
+    "S607",    # partial executable path — uv is in PATH
+    "INP001",  # implicit namespace package — standalone scripts
+    "T201",    # print — CLI feedback
+    "SLF001",  # private access — argparse introspection
+    "PLC0415", # late import — deferred to avoid circular import at parse time
 ]
 
 [tool.ty.rules]

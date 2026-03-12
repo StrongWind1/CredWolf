@@ -181,12 +181,12 @@ class KerberosHandler:
 
         # Users whose existence / status is already known.  Subsequent
         # attempts for these users are skipped without network I/O.
-        self.principal_unknown: list[str] = []
-        self.revoked_account: list[str] = []
-        self.wrong_realm: list[str] = []
+        self.principal_unknown: set[str] = set()
+        self.revoked_account: set[str] = set()
+        self.wrong_realm: set[str] = set()
 
         # Users that triggered KRB_ERR_RESPONSE_TOO_BIG (UDP too small).
-        self.response_too_big: list[str] = []
+        self.response_too_big: set[str] = set()
 
         # Extracted from KRB_ERROR responses for clock-skew diagnostics.
         self.server_time: datetime.datetime | None = None
@@ -420,27 +420,27 @@ class KerberosHandler:
         # -- user does not exist in AD ---
         if "KDC_ERR_C_PRINCIPAL_UNKNOWN" in err:
             self.logger.debug(f"User {user} — KDC_ERR_C_PRINCIPAL_UNKNOWN (not found in AD)")
-            self.principal_unknown.append(user)
+            self.principal_unknown.add(user)
 
         # -- account revoked (disabled / expired / locked out) ---
         elif "KDC_ERR_CLIENT_REVOKED" in err:
             self.logger.debug(f"User {user} — KDC_ERR_CLIENT_REVOKED (account disabled, expired, locked out, or outside logon hours)")
-            self.revoked_account.append(user)
+            self.revoked_account.add(user)
 
         # -- AD entry expired (distinct from CLIENT_REVOKED) ---
         elif "KDC_ERR_NAME_EXP" in err:
             self.logger.debug(f"User {user} — KDC_ERR_NAME_EXP (account entry expired in AD)")
-            self.revoked_account.append(user)
+            self.revoked_account.add(user)
 
         # -- account not yet valid (future start date in AD) ---
         elif "KDC_ERR_CLIENT_NOTYET" in err:
             self.logger.debug(f"User {user} — KDC_ERR_CLIENT_NOTYET (account not yet valid)")
-            self.revoked_account.append(user)
+            self.revoked_account.add(user)
 
         # -- null key (no password set on account) ---
         elif "KDC_ERR_NULL_KEY" in err:
             self.logger.debug(f"User {user} — KDC_ERR_NULL_KEY (no key set — password may need reset)")
-            self.revoked_account.append(user)
+            self.revoked_account.add(user)
 
         # -- encryption type not supported ---
         elif "KDC_ERR_ETYPE_NOSUPP" in err:
@@ -449,12 +449,12 @@ class KerberosHandler:
         # -- response too big for UDP ---
         elif "KRB_ERR_RESPONSE_TOO_BIG" in err:
             self.logger.debug(f"User {user} — KRB_ERR_RESPONSE_TOO_BIG (retry with --transport tcp)")
-            self.response_too_big.append(user)
+            self.response_too_big.add(user)
 
         # -- wrong realm (cross-realm TGT to wrong domain, typically misconfigured DNS) ---
         elif "KDC_ERR_WRONG_REALM" in err:
             self.logger.debug(f"User {user} — KDC_ERR_WRONG_REALM (incorrect domain or principal)")
-            self.wrong_realm.append(user)
+            self.wrong_realm.add(user)
 
         # -- policy rejects request (logon restrictions: workstation, time, smart card) ---
         elif "KDC_ERR_POLICY" in err:
@@ -776,7 +776,7 @@ class KerberosHandler:
         # or account locked out.  The error code does not distinguish.
         if "KDC_ERR_CLIENT_REVOKED" in err:
             self.logger.debug(f"User {dname} — KDC_ERR_CLIENT_REVOKED (account disabled, expired, locked out, or outside logon hours)")
-            self.revoked_account.append(user)
+            self.revoked_account.add(user)
             return AuthResult(success=False, details="KDC_ERR_CLIENT_REVOKED")
 
         # -- password expired (0x17) ---
@@ -798,13 +798,13 @@ class KerberosHandler:
         # The AS-REP exceeds the UDP datagram size.  Retry with TCP.
         if "KRB_ERR_RESPONSE_TOO_BIG" in err:
             self.logger.debug(f"User {dname} — KRB_ERR_RESPONSE_TOO_BIG (retry with --transport tcp)")
-            self.response_too_big.append(user)
+            self.response_too_big.add(user)
             return AuthResult(success=False, details="KRB_ERR_RESPONSE_TOO_BIG")
 
         # -- user does not exist (0x6) ---
         if "KDC_ERR_C_PRINCIPAL_UNKNOWN" in err:
             self.logger.debug(f"User {dname} — KDC_ERR_C_PRINCIPAL_UNKNOWN (user not found in AD)")
-            self.principal_unknown.append(user)
+            self.principal_unknown.add(user)
             return AuthResult(success=False)
 
         # -- policy rejects logon (0xC) ---
@@ -823,27 +823,27 @@ class KerberosHandler:
         # -- AD entry expired (0x1) ---
         if "KDC_ERR_NAME_EXP" in err:
             self.logger.debug(f"User {dname} — KDC_ERR_NAME_EXP (account entry expired in AD)")
-            self.revoked_account.append(user)
+            self.revoked_account.add(user)
             return AuthResult(success=False, details="KDC_ERR_NAME_EXP")
 
         # -- account not yet valid (0x15) ---
         if "KDC_ERR_CLIENT_NOTYET" in err:
             self.logger.debug(f"User {dname} — KDC_ERR_CLIENT_NOTYET (account not yet valid — future start date)")
-            self.revoked_account.append(user)
+            self.revoked_account.add(user)
             return AuthResult(success=False, details="KDC_ERR_CLIENT_NOTYET")
 
         # -- null key (0x9) ---
         # Account has no key material.  Admin must reset the password.
         if "KDC_ERR_NULL_KEY" in err:
             self.logger.debug(f"User {dname} — KDC_ERR_NULL_KEY (no key set on account — password may need reset)")
-            self.revoked_account.append(user)
+            self.revoked_account.add(user)
             return AuthResult(success=False, details="KDC_ERR_NULL_KEY")
 
         # -- wrong realm (0x44) ---
         # Cross-realm TGT presented to wrong domain, typically misconfigured DNS.
         if "KDC_ERR_WRONG_REALM" in err:
             self.logger.debug(f"User {dname} — KDC_ERR_WRONG_REALM (incorrect domain or principal)")
-            self.wrong_realm.append(user)
+            self.wrong_realm.add(user)
             return AuthResult(success=False)
 
         # -- smart card / PKINIT errors (0x3E-0x42) ---
@@ -951,7 +951,7 @@ class KerberosHandler:
 
         # -- definitively does not exist (0x6) ---
         if "KDC_ERR_C_PRINCIPAL_UNKNOWN" in err:
-            self.principal_unknown.append(user)
+            self.principal_unknown.add(user)
             return AuthResult(success=False)
 
         # -- clock skew (0x25) — protocol error, not a user-existence signal ---
@@ -960,12 +960,12 @@ class KerberosHandler:
 
         # -- response too big (0x34) — protocol error, retry with TCP ---
         if "KRB_ERR_RESPONSE_TOO_BIG" in err:
-            self.response_too_big.append(user)
+            self.response_too_big.add(user)
             return AuthResult(success=False, details="KRB_ERR_RESPONSE_TOO_BIG")
 
         # -- wrong realm (0x44) — domain mismatch ---
         if "KDC_ERR_WRONG_REALM" in err:
-            self.wrong_realm.append(user)
+            self.wrong_realm.add(user)
             return AuthResult(success=False, details=code_name)
 
         # -- any other error: the KDC looked up the principal and returned

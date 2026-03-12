@@ -67,10 +67,34 @@ jobs:
       - run: uv sync
       - run: uv run pytest --tb=short -q
 
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+      - run: uv sync --group docs
+      - name: Check CLI reference is up to date
+        run: |
+          uv run scripts/update-cli-reference.py
+          if [ $? -eq 1 ]; then
+            echo "::error::docs/reference/cli.md is out of date. Run 'uv run scripts/update-cli-reference.py' and commit the result."
+            exit 1
+          fi
+      - name: Build docs (strict)
+        run: uv run mkdocs build --strict
+      - name: Check internal links
+        run: uv run scripts/check-docs-links.py site
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [lint, typecheck, test]
+    needs: [lint, typecheck, test, docs]
     strategy:
       fail-fast: false
       matrix:

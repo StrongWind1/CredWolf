@@ -1,0 +1,119 @@
+site_name: CredWolf
+site_description: Credential validation tool for Active Directory Domain Services
+site_url: https://strongwind1.github.io/CredWolf/
+repo_url: https://github.com/StrongWind1/CredWolf
+repo_name: StrongWind1/CredWolf
+copyright: Copyright &copy; 2025 - 2026 StrongWind1
+
+theme:
+  name: material
+  logo: assets/credwolf_icon.png
+  favicon: assets/credwolf_icon.png
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    # Dark mode (default) — respects system preference
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+    # Light mode — respects system preference
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+  features:
+    # Navigation
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    # Table of contents
+    - toc.follow
+    # Search
+    - search.highlight
+    - search.suggest
+    - search.share
+    # Header
+    - header.autohide
+    - announce.dismiss
+    # Content
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - privacy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.mark
+  - pymdownx.keys
+  - tables
+  - attr_list
+  - md_in_html
+  - def_list
+  - footnotes
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting started:
+    - Installation: getting-started/installation.md
+    - Quick start: getting-started/quick-start.md
+  - Usage:
+    - NTLM: usage/ntlm.md
+    - Kerberos: usage/kerberos.md
+    - Username enumeration: usage/userenum.md
+    - Secretsdump integration: usage/secretsdump.md
+    - Global options: usage/global-options.md
+  - Reference:
+    - CLI reference: reference/cli.md
+    - Output format: reference/output-format.md
+    - Hash and key formats: reference/hash-key-formats.md
+    - Error handling: reference/error-handling.md
+    - Credential matrix: reference/combination-matrix.md
+  - Internals:
+    - Kerberos flow: internals/kerberos-flow.md
+    - Known limitations: internals/limitations.md
+  - Comparison: comparison.md
+  - Roadmap: roadmap.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/StrongWind1/CredWolf
+      name: CredWolf on GitHub
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
