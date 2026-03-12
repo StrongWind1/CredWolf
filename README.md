@@ -39,6 +39,14 @@ CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos 
 - **Rate limiting** — `--delay`, `--jitter`, and `--max-lockouts` to avoid triggering lockout policies
 - **Validation only** — no post-authentication activity by design
 
+### Supported protocols
+
+| Protocol | Transport | Secret types |
+|----------|-----------|--------------|
+| **NTLM** | SMB (default), LDAP, LDAPS | Password, NT hash |
+| **Kerberos** | UDP (default), TCP | Password, RC4 key, AES128 key, AES256 key, ticket (ccache/kirbi) |
+| **Username enumeration** | UDP (default), TCP | None required |
+
 ## Installation
 
 ```bash
@@ -76,13 +84,6 @@ $ credwolf -d evil.corp userenum --kdc-ip 10.0.0.1 -U users.txt
 ```
 
 See the full [usage guide](https://strongwind1.github.io/CredWolf/usage/ntlm/) and [CLI reference](https://strongwind1.github.io/CredWolf/reference/cli/) for all options.
-
-## Supported protocols
-
-| Protocol | Transport | Secret types |
-|----------|-----------|--------------|
-| **NTLM** | SMB (default), LDAP, LDAPS | Password, NT hash |
-| **Kerberos** | UDP (default), TCP | Password, RC4 key, AES128 key, AES256 key, ticket (ccache/kirbi) |
 
 ## Development
 
