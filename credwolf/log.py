@@ -39,6 +39,7 @@ class Logger:
     """
 
     def __init__(self, verbosity: int = 0) -> None:
+        """Create a logger with the given verbosity level."""
         self.verbosity = verbosity
 
     @staticmethod
@@ -62,13 +63,17 @@ class Logger:
             self._emit(_PREFIX_VERBOSE, self._fmt(message, args))
 
     def info(self, message: str, *args: object) -> None:
+        """Emit an informational message (always shown)."""
         self._emit(_PREFIX_INFO, self._fmt(message, args))
 
     def success(self, message: str, *args: object) -> None:
+        """Emit a success message (always shown)."""
         self._emit(_PREFIX_SUCCESS, self._fmt(message, args))
 
     def warning(self, message: str, *args: object) -> None:
+        """Emit a warning message (always shown)."""
         self._emit(_PREFIX_WARNING, self._fmt(message, args))
 
     def error(self, message: str, *args: object) -> None:
+        """Emit an error message (always shown)."""
         self._emit(_PREFIX_ERROR, self._fmt(message, args))

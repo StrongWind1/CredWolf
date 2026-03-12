@@ -162,6 +162,7 @@ class KerberosHandler:
     """
 
     def __init__(self, logger: Logger, timeout: float = _DEFAULT_TIMEOUT) -> None:
+        """Initialize the handler with a logger and connection timeout."""
         self.logger = logger
         self._timeout: float | None = None if timeout == 0 else timeout
 
@@ -278,7 +279,7 @@ class KerberosHandler:
                                 component.asOctets().decode("utf-8"),
                                 "%Y%m%d%H%M%SZ",
                             ).replace(tzinfo=datetime.UTC)
-        except Exception:  # noqa: S110
+        except Exception:
             pass
 
     def _send_receive(self, data: bytes, host: str, kdc_host: str | None, transport: str, *, expect_preauth_required: bool = False) -> bytes:
@@ -369,7 +370,7 @@ class KerberosHandler:
         try:
             decoder.decode(response, asn1Spec=AS_REP())[0]
             is_as_rep = True
-        except Exception:  # noqa: S110
+        except Exception:
             pass
         if is_as_rep:
             self.logger.debug(f"User {user} — no pre-auth required (ASREProastable), using default salt")

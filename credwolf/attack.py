@@ -116,6 +116,7 @@ class AttackRunner:
     """Coordinate credential testing across protocols."""
 
     def __init__(self, options: AttackOptions, logger: Logger, output_file: TextIO | None = None) -> None:
+        """Initialize the runner with attack options, logger, and optional output file."""
         self.options = options
         self.logger = logger
         self.ntlm = NtlmHandler(logger, timeout=options.timeout)

@@ -34,6 +34,7 @@ class NtlmHandler:
     )
 
     def __init__(self, logger: Logger, timeout: float = _DEFAULT_TIMEOUT) -> None:
+        """Initialize the handler with a logger and connection timeout."""
         self.logger = logger
         # SMBConnection passes timeout to socket.settimeout().
         # settimeout(0) = non-blocking (broken), settimeout(None) = blocking (infinite).

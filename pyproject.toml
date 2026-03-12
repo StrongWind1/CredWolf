@@ -61,38 +61,42 @@ line-length = 320
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    "E501",    # line length — disabled
-    "D",       # pydocstyle — disabled
-    "T20",     # print statements — CLI tool
     "COM812",  # trailing comma — formatter conflict
     "ISC001",  # string concat — formatter conflict
+    "D203",    # blank line before class docstring — incompatible with D211
+    "D213",    # multi-line summary second line — incompatible with D212
+    "T20",     # print statements — CLI tool
     "G004",    # f-string logging — custom logger, readability wins
     "ANN401",  # Any — impacket is untyped
     "BLE001",  # broad except — impacket exceptions undocumented
     "TRY400",  # logging.exception — not using stdlib logging
+    "S110",    # try-except-pass — intentional silent catches on ASN.1 probing
     "PLR0913", # too many args — protocol methods need them
     "PLR0912", # too many branches — protocol state machines
     "PLR0915", # too many statements — protocol methods
     "PLR0911", # too many returns — protocol methods
     "C901",    # complexity — protocol methods
-    "S105",    # hardcoded password — false positives on label strings
     "S106",    # hardcoded password in arg — false positives on secret_type labels
     "SIM108",  # ternary — readability loss on multi-arg calls
-    "N802",    # uppercase in function name — test names match CLI flags
-    "EM101",   # string literal in exception — not a library
-    "TRY003",  # long exception message — not a library
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [
+    "D",       # docstrings — tests
     "S101",    # assert — pytest idiom
+    "S105",    # hardcoded password — test data
+    "S106",    # hardcoded password in arg — test data
     "S603",    # subprocess — test-only
     "PLR2004", # magic values — test assertions
     "PLC0415", # late imports — smoke tests
     "ANN",     # annotations — pytest fixtures / test helpers
     "SLF001",  # private access — testing internal methods
+    "N802",    # uppercase in function name — test names match CLI flags
+    "EM101",   # string literal in exception — test assertions
+    "TRY003",  # long exception message — test assertions
 ]
 "scripts/**" = [
+    "D",       # docstrings — scripts
     "S603",    # subprocess — scripts call uv
     "S607",    # partial executable path — uv is in PATH
     "INP001",  # implicit namespace package — standalone scripts
@@ -100,6 +104,7 @@ ignore = [
     "SLF001",  # private access — argparse introspection
     "PLC0415", # late import — deferred to avoid circular import at parse time
 ]
+
 
 [tool.ty.rules]
 all = "error"
