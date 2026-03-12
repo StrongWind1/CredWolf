@@ -169,6 +169,12 @@ class KerberosHandler:
         # Populated by ``_get_salts`` on the first AES attempt for each user.
         self.salts: dict[str, dict[int, bytes]] = {}
 
+        # Per-user s2kparams cache: ``{username: {etype_int: params_bytes}}``.
+        # Extracted from ETYPE-INFO2 (RFC 4120 §5.2.7.5).  Contains the
+        # opaque string-to-key parameters (e.g., PBKDF2 iteration count
+        # for AES per RFC 3962).
+        self.s2kparams: dict[str, dict[int, bytes | None]] = {}
+
         # Correct username casing extracted from ETYPE-INFO2 salts.
         # Maps ``input_username`` → ``exact_username`` as stored in AD.
         self.username_corrections: dict[str, str] = {}
@@ -184,6 +190,10 @@ class KerberosHandler:
 
         # Extracted from KRB_ERROR responses for clock-skew diagnostics.
         self.server_time: datetime.datetime | None = None
+
+    def _display_user(self, user: str) -> str:
+        """Return the KDC-corrected username if available, otherwise the original."""
+        return self.username_corrections.get(user, user)
 
     # ===================================================================
     # Network transport
@@ -204,24 +214,38 @@ class KerberosHandler:
     def _send_tcp(self, data: bytes, host: str) -> bytes:
         """Send *data* to the KDC over TCP and return the raw response."""
         af, sa = self._resolve_kdc(host)
-        # TCP Kerberos frames are prefixed with a 4-byte big-endian length.
-        frame = struct.pack("!i", len(data)) + data
+        # TCP Kerberos frames are prefixed with a 4-byte big-endian length
+        # (RFC 4120 §7.2.2 — unsigned 32-bit network-order).
+        frame = struct.pack("!I", len(data)) + data
         sock = socket.socket(af, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         sock.settimeout(self._timeout)
         try:
             sock.connect(sa)
             sock.sendall(frame)
-            recv_len = struct.unpack("!i", sock.recv(4))[0]
-            result = sock.recv(recv_len)
-            while len(result) < recv_len:
-                result += sock.recv(recv_len - len(result))
-        except (OSError, struct.error) as exc:
+            # Read the 4-byte length prefix, handling partial reads.
+            header = self._recv_exact(sock, 4)
+            # RFC 4120 §7.2.2: high bit is reserved and MUST be zero.
+            recv_len = struct.unpack("!I", header)[0] & 0x7FFFFFFF
+            result = self._recv_exact(sock, recv_len)
+        except (OSError, struct.error, ValueError) as exc:
             msg = f"Cannot connect to KDC at {host}:{_KDC_PORT}/tcp — {exc}"
             raise ConnectionError(msg) from exc
         else:
             return result
         finally:
             sock.close()
+
+    @staticmethod
+    def _recv_exact(sock: socket.socket, length: int) -> bytes:
+        """Read exactly *length* bytes from *sock*, raising on short read."""
+        buf = bytearray()
+        while len(buf) < length:
+            chunk = sock.recv(length - len(buf))
+            if not chunk:
+                msg = "Connection closed by KDC before full response was received"
+                raise ConnectionError(msg)
+            buf.extend(chunk)
+        return bytes(buf)
 
     def _send_udp(self, data: bytes, host: str) -> bytes:
         """Send *data* to the KDC over UDP and return the raw response."""
@@ -257,13 +281,17 @@ class KerberosHandler:
         except Exception:  # noqa: S110
             pass
 
-    def _send_receive(self, data: bytes, host: str, kdc_host: str | None, transport: str) -> bytes:
+    def _send_receive(self, data: bytes, host: str, kdc_host: str | None, transport: str, *, expect_preauth_required: bool = False) -> bytes:
         """Send a Kerberos message and return the raw response.
 
         Handles transport dispatch (TCP / UDP) and raises
         :class:`~impacket.krb5.kerberosv5.KerberosError` for any KRB_ERROR
-        other than ``KDC_ERR_PREAUTH_REQUIRED`` (which is the expected
-        response when retrieving salts).
+        that the caller does not expect.
+
+        When *expect_preauth_required* is True (salt retrieval), a
+        ``KDC_ERR_PREAUTH_REQUIRED`` response is returned silently.
+        When False (pre-auth), **all** KRB_ERROR responses are raised so
+        the caller never mistakes an error for a successful AS-REP.
         """
         target = kdc_host if kdc_host is not None else host
         self.logger.debug(f"Sending to KDC at {target} via {transport.upper()}")
@@ -279,18 +307,20 @@ class KerberosHandler:
         # Try to extract server time from any response (for clock-skew info).
         self._extract_server_time(result)
 
-        # Check whether the response is a KRB_ERROR.  If it is anything other
-        # than PREAUTH_REQUIRED (which we intentionally trigger during salt
-        # retrieval), re-raise it so callers can handle specific error codes.
+        # Check whether the response is a KRB_ERROR.
         try:
             krb_error = KerberosError(packet=decoder.decode(result, asn1Spec=KRB_ERROR())[0])
         except Exception:
             # Not a KRB_ERROR — likely an AS-REP (success).
             return result
 
-        if krb_error.getErrorCode() != _KDC_ERR_PREAUTH_REQUIRED:
-            raise krb_error
-        return result
+        # During salt retrieval we intentionally trigger PREAUTH_REQUIRED
+        # and want it returned silently.  For pre-auth requests, ALL errors
+        # must be raised so the caller can distinguish success from failure.
+        if expect_preauth_required and krb_error.getErrorCode() == _KDC_ERR_PREAUTH_REQUIRED:
+            return result
+
+        raise krb_error
 
     # ===================================================================
     # Salt retrieval  (AS-REQ without pre-auth — NOT a login attempt)
@@ -312,11 +342,11 @@ class KerberosHandler:
         user: str,
         etype: EncryptionType,
         transport: str,
-    ) -> dict[int, bytes] | None:
+    ) -> tuple[dict[int, bytes], dict[int, bytes | None]] | None:
         """Send a bare AS-REQ to retrieve the per-user salts.
 
-        Returns a mapping of ``{etype_int: salt_bytes}`` or ``None`` on
-        failure.  Side-effects: may add *user* to :attr:`principal_unknown`
+        Returns ``(salts, s2kparams)`` or ``None`` on failure.
+        Side-effects: may add *user* to :attr:`principal_unknown`
         or :attr:`revoked_account`.
         """
         self.logger.debug(f"Retrieving Kerberos salts for {user}")
@@ -325,14 +355,30 @@ class KerberosHandler:
         as_req = self._build_bare_as_req(domain_upper, user, (_ETYPE_MAP[etype],))
 
         try:
-            response = self._send_receive(data=encoder.encode(as_req), host=domain, kdc_host=target, transport=transport)
+            response = self._send_receive(data=encoder.encode(as_req), host=domain, kdc_host=target, transport=transport, expect_preauth_required=True)
         except ConnectionError as exc:
             self.logger.error(str(exc))
             return None
         except Exception as exc:
             return self._handle_salt_error(user, exc)
 
-        return self._parse_salt_response(response, domain_upper, user)
+        # If the response is an AS-REP rather than KRB_ERROR, the user has
+        # pre-auth disabled (ASREProastable).  There is no e-data with salts,
+        # so synthesise a default salt: REALM + username (RFC 4120 §5.2.7.4).
+        is_as_rep = False
+        try:
+            decoder.decode(response, asn1Spec=AS_REP())[0]
+            is_as_rep = True
+        except Exception:  # noqa: S110
+            pass
+        if is_as_rep:
+            self.logger.debug(f"User {user} — no pre-auth required (ASREProastable), using default salt")
+            default_salt = (domain_upper + user).encode()
+            enc_type = _ETYPE_MAP[etype]
+            return {enc_type: default_salt}, {}
+
+        salts, s2kparams = self._parse_salt_response(response, domain_upper, user)
+        return salts, s2kparams
 
     def _build_bare_as_req(self, realm: str, user: str, etypes: tuple[int, ...]) -> AS_REQ:
         """Build an AS-REQ with no pre-authentication data.
@@ -350,7 +396,7 @@ class KerberosHandler:
 
         req_body = seq_set(as_req, "req-body")
         req_body["kdc-options"] = constants.encodeFlags(_KDC_OPTS)
-        seq_set(req_body, "sname", Principal(f"krbtgt/{realm}", type=_NT_PRINCIPAL).components_to_asn1)
+        seq_set(req_body, "sname", Principal(f"krbtgt/{realm}", type=_NT_SRV_INST).components_to_asn1)
         seq_set(req_body, "cname", Principal(user, type=_NT_PRINCIPAL).components_to_asn1)
         req_body["realm"] = realm
 
@@ -400,6 +446,11 @@ class KerberosHandler:
         elif "KDC_ERR_ETYPE_NOSUPP" in err:
             self.logger.debug(f"User {user} — KDC_ERR_ETYPE_NOSUPP (encryption type not supported for salt retrieval)")
 
+        # -- response too big for UDP ---
+        elif "KRB_ERR_RESPONSE_TOO_BIG" in err:
+            self.logger.debug(f"User {user} — KRB_ERR_RESPONSE_TOO_BIG (retry with --transport tcp)")
+            self.response_too_big.append(user)
+
         # -- wrong realm (cross-realm TGT to wrong domain, typically misconfigured DNS) ---
         elif "KDC_ERR_WRONG_REALM" in err:
             self.logger.debug(f"User {user} — KDC_ERR_WRONG_REALM (incorrect domain or principal)")
@@ -412,8 +463,11 @@ class KerberosHandler:
         else:
             self.logger.debug(f"Salt retrieval error for {user}: {exc}")
 
-    def _parse_salt_response(self, response: bytes, realm: str = "", user: str = "") -> dict[int, bytes]:
-        """Extract ``{etype_int: salt}`` from a KDC_ERR_PREAUTH_REQUIRED response.
+    def _parse_salt_response(self, response: bytes, realm: str = "", user: str = "") -> tuple[dict[int, bytes], dict[int, bytes | None]]:
+        """Extract salts and s2kparams from a KDC_ERR_PREAUTH_REQUIRED response.
+
+        Returns ``(salts, s2kparams)`` where *salts* is ``{etype_int: salt_bytes}``
+        and *s2kparams* is ``{etype_int: params_bytes_or_None}``.
 
         As a side-effect, attempts to extract the correct username casing
         from the AES salt (format: ``REALMusername``) and stores it in
@@ -426,18 +480,32 @@ class KerberosHandler:
                 as_rep = decoder.decode(response, asn1Spec=AS_REP())[0]
 
             result: dict[int, bytes] = {}
+            s2kparams: dict[int, bytes | None] = {}
+            found_etype_info2 = False
             methods = decoder.decode(as_rep["e-data"], asn1Spec=METHOD_DATA())[0]
             for method in methods:
                 padata_type = int(method["padata-type"])
 
-                # ETYPE-INFO2 is the modern salt format (RFC 4120).
+                # ETYPE-INFO2 is the modern salt format (RFC 4120 §5.2.7.5).
+                # Per the RFC, ETYPE-INFO2 takes priority over ETYPE-INFO;
+                # if ETYPE-INFO2 is present, ETYPE-INFO SHOULD be ignored.
                 if padata_type == _PA_ETYPE_INFO2:
+                    found_etype_info2 = True
                     for entry in decoder.decode(method["padata-value"], asn1Spec=ETYPE_INFO2())[0]:
                         try:
                             salt = "" if entry["salt"] is None or not entry["salt"].hasValue() else entry["salt"].prettyPrint()
                         except PyAsn1Error:
                             salt = ""
-                        result[int(entry["etype"])] = salt.encode()
+                        etype_val = int(entry["etype"])
+                        result[etype_val] = salt.encode()
+                        # Extract s2kparams if present (RFC 4120 §5.2.7.5).
+                        # Used as the opaque parameter to string-to-key
+                        # (e.g., PBKDF2 iteration count for AES per RFC 3962).
+                        try:
+                            if entry["s2kparams"] is not None and entry["s2kparams"].hasValue():
+                                s2kparams[etype_val] = bytes(entry["s2kparams"])
+                        except PyAsn1Error:
+                            pass
                         # Try to extract the correct username case from the salt.
                         if salt and realm and user and salt.startswith(realm):
                             correct_user = salt[len(realm) :]
@@ -445,20 +513,26 @@ class KerberosHandler:
                                 self.username_corrections[user] = correct_user
                                 self.logger.debug(f"Username case correction: {user} → {correct_user}")
 
-                # ETYPE-INFO is the legacy format; used as a fallback.
-                elif padata_type == _PA_ETYPE_INFO:
+                # ETYPE-INFO is the legacy format; only used as a fallback
+                # when ETYPE-INFO2 was not present (RFC 4120 §5.2.7.5).
+                elif padata_type == _PA_ETYPE_INFO and not found_etype_info2:
                     for entry in decoder.decode(method["padata-value"], asn1Spec=ETYPE_INFO())[0]:
                         try:
-                            salt = "" if entry["salt"] is None or not entry["salt"].hasValue() else entry["salt"].prettyPrint()
+                            # ETYPE-INFO salt is OCTET STRING (RFC 4120 §5.2.7.4);
+                            # extract raw bytes, not prettyPrint() which may hex-format.
+                            if entry["salt"] is None or not entry["salt"].hasValue():
+                                salt_bytes = b""
+                            else:
+                                salt_bytes = bytes(entry["salt"])
                         except PyAsn1Error:
-                            salt = ""
-                        result[int(entry["etype"])] = salt.encode()
+                            salt_bytes = b""
+                        result[int(entry["etype"])] = salt_bytes
 
         except Exception:
             self.logger.debug("Failed to parse salt response")
-            return {}
+            return {}, {}
         else:
-            return result
+            return result, s2kparams
 
     # ===================================================================
     # Key derivation
@@ -522,11 +596,13 @@ class KerberosHandler:
             return None
 
         if enc_type not in salts:
-            self.logger.debug(f"No salt available for etype {enc_type}")
+            self.logger.debug(f"No salt available for {self._display_user(user)} etype {enc_type}")
             return None
 
-        self.logger.debug(f"Using salt: {salts[enc_type].decode('utf-8')}")
-        return cipher, cipher.string_to_key(password or "", salts[enc_type], None)
+        self.logger.debug(f"Using salt for {self._display_user(user)}: {salts[enc_type].decode('utf-8', errors='replace')}")
+        # Use s2kparams from ETYPE-INFO2 if available (RFC 4120 §5.2.7.5).
+        params = self.s2kparams.get(user, {}).get(enc_type)
+        return cipher, cipher.string_to_key(password or "", salts[enc_type], params)
 
     def _get_or_cache_salts(
         self,
@@ -541,17 +617,20 @@ class KerberosHandler:
         if user in self.salts:
             return self.salts[user]
 
-        result = self._get_salts(target=target, domain=domain, user=user, etype=etype, transport=transport)
+        fetched = self._get_salts(target=target, domain=domain, user=user, etype=etype, transport=transport)
 
         # The salt request may have revealed that the user is unknown/revoked/wrong-realm.
         if user in self.principal_unknown or user in self.revoked_account or user in self.wrong_realm:
             return None
-        if not result:
-            self.logger.debug(f"Could not get salts for {user}")
+        if not fetched or not fetched[0]:
+            self.logger.debug(f"Could not get salts for {self._display_user(user)}")
             return None
 
-        self.salts[user] = result
-        return result
+        salts, s2k = fetched
+        self.salts[user] = salts
+        if s2k:
+            self.s2kparams[user] = s2k
+        return salts
 
     @staticmethod
     def _try_unhex(hex_str: str | None) -> bytes | None:
@@ -650,7 +729,7 @@ class KerberosHandler:
 
         req_body = seq_set(as_req, "req-body")
         req_body["kdc-options"] = constants.encodeFlags(_KDC_OPTS)
-        seq_set(req_body, "sname", Principal(f"krbtgt/{realm}", type=_NT_PRINCIPAL).components_to_asn1)
+        seq_set(req_body, "sname", Principal(f"krbtgt/{realm}", type=_NT_SRV_INST).components_to_asn1)
         seq_set(req_body, "cname", Principal(user, type=_NT_PRINCIPAL).components_to_asn1)
         req_body["realm"] = realm
 
@@ -684,18 +763,19 @@ class KerberosHandler:
         meaning of each error code per MS-KILE and Microsoft docs.
         """
         err = str(exc)
+        dname = self._display_user(user)
 
         # -- wrong password / key (0x18) ---
         # The encrypted timestamp could not be decrypted.
         if "KDC_ERR_PREAUTH_FAILED" in err:
-            self.logger.debug(f"User {user} — KDC_ERR_PREAUTH_FAILED (wrong password or key)")
+            self.logger.debug(f"User {dname} — KDC_ERR_PREAUTH_FAILED (wrong password or key)")
             return AuthResult(success=False)
 
         # -- account revoked: disabled, expired, or locked out (0x12) ---
         # AD returns this for any of: account disabled, account expired,
         # or account locked out.  The error code does not distinguish.
         if "KDC_ERR_CLIENT_REVOKED" in err:
-            self.logger.debug(f"User {user} — KDC_ERR_CLIENT_REVOKED (account disabled, expired, locked out, or outside logon hours)")
+            self.logger.debug(f"User {dname} — KDC_ERR_CLIENT_REVOKED (account disabled, expired, locked out, or outside logon hours)")
             self.revoked_account.append(user)
             return AuthResult(success=False, details="KDC_ERR_CLIENT_REVOKED")
 
@@ -703,7 +783,7 @@ class KerberosHandler:
         # The password IS correct, but the account requires a password
         # change.  This confirms the credential is valid.
         if "KDC_ERR_KEY_EXPIRED" in err:
-            self.logger.debug(f"User {user} — KDC_ERR_KEY_EXPIRED (password correct but expired — must change)")
+            self.logger.debug(f"User {dname} — KDC_ERR_KEY_EXPIRED (password correct but expired — must change)")
             return AuthResult(success=True, details="KDC_ERR_KEY_EXPIRED")
 
         # -- clock skew (0x25) ---
@@ -711,19 +791,19 @@ class KerberosHandler:
         # than the allowed skew (default 5 minutes in AD).  All Kerberos
         # results are unreliable until clocks are synced.
         if "KRB_AP_ERR_SKEW" in err:
-            self.logger.debug(f"User {user} — KRB_AP_ERR_SKEW (clock skew too great)")
+            self.logger.debug(f"User {dname} — KRB_AP_ERR_SKEW (clock skew too great)")
             return AuthResult(success=False, details="KRB_AP_ERR_SKEW")
 
         # -- response too big for UDP (0x34) ---
         # The AS-REP exceeds the UDP datagram size.  Retry with TCP.
         if "KRB_ERR_RESPONSE_TOO_BIG" in err:
-            self.logger.debug(f"User {user} — KRB_ERR_RESPONSE_TOO_BIG (retry with --transport tcp)")
+            self.logger.debug(f"User {dname} — KRB_ERR_RESPONSE_TOO_BIG (retry with --transport tcp)")
             self.response_too_big.append(user)
             return AuthResult(success=False, details="KRB_ERR_RESPONSE_TOO_BIG")
 
         # -- user does not exist (0x6) ---
         if "KDC_ERR_C_PRINCIPAL_UNKNOWN" in err:
-            self.logger.debug(f"User {user} — KDC_ERR_C_PRINCIPAL_UNKNOWN (user not found in AD)")
+            self.logger.debug(f"User {dname} — KDC_ERR_C_PRINCIPAL_UNKNOWN (user not found in AD)")
             self.principal_unknown.append(user)
             return AuthResult(success=False)
 
@@ -732,53 +812,53 @@ class KerberosHandler:
         # The password may or may not be correct — AD blocks the attempt
         # before checking the credential.
         if "KDC_ERR_POLICY" in err:
-            self.logger.debug(f"User {user} — KDC_ERR_POLICY (logon restricted by AD policy — typically smart card required)")
+            self.logger.debug(f"User {dname} — KDC_ERR_POLICY (logon restricted by AD policy — typically smart card required)")
             return AuthResult(success=None, details="KDC_ERR_POLICY")
 
         # -- encryption type not supported (0xE) ---
         if "KDC_ERR_ETYPE_NOSUPP" in err:
-            self.logger.debug(f"User {user} — KDC_ERR_ETYPE_NOSUPP (encryption type not supported)")
+            self.logger.debug(f"User {dname} — KDC_ERR_ETYPE_NOSUPP (encryption type not supported)")
             return AuthResult(success=False, details="KDC_ERR_ETYPE_NOSUPP")
 
         # -- AD entry expired (0x1) ---
         if "KDC_ERR_NAME_EXP" in err:
-            self.logger.debug(f"User {user} — KDC_ERR_NAME_EXP (account entry expired in AD)")
+            self.logger.debug(f"User {dname} — KDC_ERR_NAME_EXP (account entry expired in AD)")
             self.revoked_account.append(user)
             return AuthResult(success=False, details="KDC_ERR_NAME_EXP")
 
         # -- account not yet valid (0x15) ---
         if "KDC_ERR_CLIENT_NOTYET" in err:
-            self.logger.debug(f"User {user} — KDC_ERR_CLIENT_NOTYET (account not yet valid — future start date)")
+            self.logger.debug(f"User {dname} — KDC_ERR_CLIENT_NOTYET (account not yet valid — future start date)")
             self.revoked_account.append(user)
             return AuthResult(success=False, details="KDC_ERR_CLIENT_NOTYET")
 
         # -- null key (0x9) ---
         # Account has no key material.  Admin must reset the password.
         if "KDC_ERR_NULL_KEY" in err:
-            self.logger.debug(f"User {user} — KDC_ERR_NULL_KEY (no key set on account — password may need reset)")
+            self.logger.debug(f"User {dname} — KDC_ERR_NULL_KEY (no key set on account — password may need reset)")
             self.revoked_account.append(user)
             return AuthResult(success=False, details="KDC_ERR_NULL_KEY")
 
         # -- wrong realm (0x44) ---
         # Cross-realm TGT presented to wrong domain, typically misconfigured DNS.
         if "KDC_ERR_WRONG_REALM" in err:
-            self.logger.debug(f"User {user} — KDC_ERR_WRONG_REALM (incorrect domain or principal)")
+            self.logger.debug(f"User {dname} — KDC_ERR_WRONG_REALM (incorrect domain or principal)")
             self.wrong_realm.append(user)
             return AuthResult(success=False)
 
         # -- smart card / PKINIT errors (0x3E-0x42) ---
         if "KDC_ERR_CLIENT_NOT_TRUSTED" in err:
-            self.logger.debug(f"User {user} — KDC_ERR_CLIENT_NOT_TRUSTED (smart card certificate revoked or untrusted CA)")
+            self.logger.debug(f"User {dname} — KDC_ERR_CLIENT_NOT_TRUSTED (smart card certificate revoked or untrusted CA)")
             return AuthResult(success=False)
 
         # -- generic error (0x3C) ---
         # PAC too large, SPN issues, crypto subsystem errors, etc.
         if "KRB_ERR_GENERIC" in err:
-            self.logger.debug(f"User {user} — KRB_ERR_GENERIC (generic KDC error)")
+            self.logger.debug(f"User {dname} — KRB_ERR_GENERIC (generic KDC error)")
             return AuthResult(success=False)
 
         # -- anything else: log the raw error ---
-        self.logger.debug(f"User {user} — Kerberos error: {exc}")
+        self.logger.debug(f"User {dname} — Kerberos error: {exc}")
         return AuthResult(success=False)
 
     # ===================================================================
@@ -820,6 +900,7 @@ class KerberosHandler:
                 host=domain,
                 kdc_host=target,
                 transport=transport,
+                expect_preauth_required=True,
             )
         except ConnectionError as exc:
             self.logger.error(str(exc))
@@ -967,11 +1048,14 @@ class KerberosHandler:
         try:
             ticket_user = creds["client"].prettyPrint().split(b"@")[0].decode("utf-8")
         except Exception:
-            if ticket_cache.principal is not None and len(ticket_cache.principal.components) > 0:
-                ticket_user = ticket_cache.principal.components[0]["data"].decode("utf-8")
+            try:
+                if ticket_cache.principal is not None and len(ticket_cache.principal.components) > 0:
+                    ticket_user = ticket_cache.principal.components[0]["data"].decode("utf-8", errors="replace")
+            except Exception:
+                self.logger.debug("Could not extract principal from ticket")
 
         if ticket_user.lower() != user.lower():
-            self.logger.debug(f"Ticket principal {ticket_user} does not match user {user}")
+            self.logger.debug(f"Ticket principal {ticket_user} does not match user {self._display_user(user)}")
             return AuthResult(success=False, details="principal mismatch"), fmt
 
         # Send a TGS-REQ to confirm the TGT is still accepted by the KDC.
@@ -988,5 +1072,5 @@ class KerberosHandler:
             )
             return AuthResult(success=True), fmt
         except Exception:
-            self.logger.debug(f"Ticket TGS validation failed for {user}")
+            self.logger.debug(f"Ticket TGS validation failed for {self._display_user(user)}")
             return AuthResult(success=False), fmt

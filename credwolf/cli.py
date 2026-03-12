@@ -435,16 +435,20 @@ def main(argv: list[str] | None = None) -> None:
     _print_header(options)
     logger.info("Starting credential validation")
 
-    with contextlib.ExitStack() as stack:
-        output_fh = None
-        if options.output_file:
-            try:
-                output_fh = stack.enter_context(Path(options.output_file).open("w"))
-            except OSError as exc:
-                logger.error(f"Cannot open output file: {exc}")
-                return
-        runner = AttackRunner(options, logger, output_fh)
-        runner.run()
+    try:
+        with contextlib.ExitStack() as stack:
+            output_fh = None
+            if options.output_file:
+                try:
+                    output_fh = stack.enter_context(Path(options.output_file).open("w"))
+                except OSError as exc:
+                    logger.error(f"Cannot open output file: {exc}")
+                    return
+            runner = AttackRunner(options, logger, output_fh)
+            runner.run()
+    except KeyboardInterrupt:
+        logger.error("Interrupted by user")
+        raise SystemExit(130) from None
 
 
 if __name__ == "__main__":

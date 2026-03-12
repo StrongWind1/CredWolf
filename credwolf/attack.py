@@ -124,6 +124,18 @@ class AttackRunner:
         self._clock_skew = False
         self._consecutive_revoked = 0
         self._output_file = output_file
+        self._case_correction_logged: set[str] = set()
+
+    def _display_user(self, user: str) -> str:
+        """Return the KDC-corrected username if available, otherwise the original."""
+        return self.kerberos.username_corrections.get(user, user)
+
+    def _log_case_correction(self, user: str) -> None:
+        """Log a username case correction once per user at verbose level."""
+        corrected = self._display_user(user)
+        if corrected != user and user not in self._case_correction_logged:
+            self._case_correction_logged.add(user)
+            self.logger.verbose(f"Username case corrected by KDC: {user} → {corrected}")
 
     # -- result rendering ---------------------------------------------------
 
@@ -288,7 +300,7 @@ class AttackRunner:
                 transport=opts.kdc_transport,
             )
         except Exception:
-            self.logger.error(f"Kerberos pre-auth failed for {user}")
+            self.logger.error(f"Kerberos pre-auth failed for {self._display_user(user)}")
             return AuthResult(success=False)
 
     def _attempt(
@@ -318,7 +330,8 @@ class AttackRunner:
         else:
             result = self._try_kerberos(user, password, rc4_key, aes128_key, aes256_key)
 
-        self._handle_auth_results(domain, user, secret, secret_type, result)
+        self._log_case_correction(user)
+        self._handle_auth_results(domain, self._display_user(user), secret, secret_type, result)
 
         if result.details == "connection failed":
             self._connection_failed = True
@@ -455,7 +468,7 @@ class AttackRunner:
     ) -> None:
         total_users = len(users)
         for u_idx, user in enumerate(users, start=1):
-            self.logger.verbose(f"User {u_idx}/{total_users}: {user}")
+            self.logger.verbose(f"User {u_idx}/{total_users}: {self._display_user(user)}")
             if passwords is not None:
                 for pw in passwords:
                     success = self._attempt(user, password=pw, secret_type="password")
@@ -561,7 +574,7 @@ class AttackRunner:
     ) -> None:
         total_users = len(users)
         for u_idx, user in enumerate(users, start=1):
-            self.logger.verbose(f"User {u_idx}/{total_users}: {user}")
+            self.logger.verbose(f"User {u_idx}/{total_users}: {self._display_user(user)}")
             for rc4, aes128, aes256, label in key_sources:
                 success = self._attempt(user, rc4_key=rc4, aes128_key=aes128, aes256_key=aes256, secret_type=f"{label.lower()}_key")
                 if self._should_stop(success=success):
@@ -574,14 +587,14 @@ class AttackRunner:
         domain = opts.domain or ""
         total = len(users)
         for idx, user in enumerate(users, start=1):
-            self.logger.verbose(f"User {idx}/{total}: {user}")
+            self.logger.verbose(f"User {idx}/{total}: {self._display_user(user)}")
             result, fmt = self.kerberos.ticket_authentication(
                 ticket_path=opts.ticket or "",
                 domain=domain,
                 user=user,
                 kdc_ip=opts.kdc_ip,
             )
-            self._handle_auth_results(domain, user, opts.ticket or "", fmt, result)
+            self._handle_auth_results(domain, self._display_user(user), opts.ticket or "", fmt, result)
             if result.details == "connection failed":
                 self._connection_failed = True
             if self._should_stop(success=result.success):
@@ -606,7 +619,7 @@ class AttackRunner:
                 self.logger.error(f"Skipping line {idx} (invalid key — expected {RC4_KEY_HEX_LEN} hex chars for RC4 or {AES256_KEY_HEX_LEN} hex chars for AES256): {key_hex}")
                 continue
             rc4, aes128, aes256, label = detected
-            self.logger.verbose(f"Pair {idx}/{total}: {user.strip()} ({label})")
+            self.logger.verbose(f"Pair {idx}/{total}: {self._display_user(user.strip())} ({label})")
             success = self._attempt(
                 user.strip(),
                 rc4_key=rc4,
@@ -632,7 +645,7 @@ class AttackRunner:
                 continue
             user, rest = line.split(":", 1)
             user = user.strip()
-            self.logger.verbose(f"Pair {idx}/{total}: {user}")
+            self.logger.verbose(f"Pair {idx}/{total}: {self._display_user(user)}")
             if is_hash:
                 parsed = _parse_hash_line(rest)
                 if parsed is None:

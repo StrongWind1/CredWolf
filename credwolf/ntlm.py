@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 from impacket.ldap import ldap as impacket_ldap
@@ -106,6 +107,8 @@ class NtlmHandler:
             # is returned before password validation on most AD versions).
             self.logger.debug(f"User {user} — {error_code}")
             return AuthResult(success=None, details=error_code)
+        finally:
+            smb_conn.close()
 
     # -- LDAP / LDAPS -------------------------------------------------------
 
@@ -123,6 +126,7 @@ class NtlmHandler:
         lm_hash = lm_hash or ""
         scheme = "ldaps" if transport == NtlmTransport.LDAPS else "ldap"
 
+        ldap_conn = None
         try:
             self.logger.debug(f"Connecting to {scheme}://{target}")
             ldap_conn = impacket_ldap.LDAPConnection(url=f"{scheme}://{target}")
@@ -147,6 +151,10 @@ class NtlmHandler:
         except Exception as exc:
             self.logger.error(f"Cannot connect to {scheme}://{target} — {exc}")
             return AuthResult(success=False, details="connection failed")
+        finally:
+            if ldap_conn is not None:
+                with contextlib.suppress(Exception):
+                    ldap_conn.close()
 
     def _ldaps_retry(
         self,
@@ -157,6 +165,7 @@ class NtlmHandler:
         lm_hash: str,
         nt_hash: str,
     ) -> AuthResult:
+        ldap_conn = None
         try:
             ldap_conn = impacket_ldap.LDAPConnection(url=f"ldaps://{target}")
             ldap_conn.login(
@@ -172,3 +181,7 @@ class NtlmHandler:
         except Exception as exc:
             self.logger.error(f"Cannot connect to ldaps://{target} — {exc}")
             return AuthResult(success=False, details="connection failed")
+        finally:
+            if ldap_conn is not None:
+                with contextlib.suppress(Exception):
+                    ldap_conn.close()
