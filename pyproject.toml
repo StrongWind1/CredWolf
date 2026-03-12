@@ -29,6 +29,8 @@ dependencies = [
 
 [project.urls]
 Repository = "https://github.com/StrongWind1/CredWolf"
+Changelog = "https://github.com/StrongWind1/CredWolf/blob/main/CHANGELOG.md"
+Issues = "https://github.com/StrongWind1/CredWolf/issues"
 
 [project.scripts]
 credwolf = "credwolf.cli:main"
