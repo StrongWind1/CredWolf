@@ -12,6 +12,15 @@ requires-python = ">=3.11,<3.15"
 authors = [
     {name = "StrongWind1"},
 ]
+keywords = [
+    "active-directory",
+    "credential-validation",
+    "kerberos",
+    "ntlm",
+    "penetration-testing",
+    "red-team",
+    "security",
+]
 classifiers = [
     "Environment :: Console",
     "License :: OSI Approved :: Apache Software License",
