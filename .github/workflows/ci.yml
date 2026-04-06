@@ -146,12 +146,12 @@ jobs:
       - name: Build docs (strict)
         run: |
           set -euo pipefail
-          uv run mkdocs build --strict
+          uv run --group docs mkdocs build --strict
 
       - name: Check internal links
         run: |
           set -euo pipefail
-          uv run scripts/check-docs-links.py site
+          uv run --group docs scripts/check-docs-links.py site
 
   build:
     name: Build
