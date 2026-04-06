@@ -1,66 +1,25 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
-
-# Coverage
-.coverage
-htmlcov/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Tool caches
-.ruff_cache/
-.pytest_cache/
-.mypy_cache/
-.ty/
-.claude/
-
-# Created by https://www.toptal.com/developers/gitignore/api/macos,python,visualstudiocode,linux,windows
-# Edit at https://www.toptal.com/developers/gitignore?templates=macos,python,visualstudiocode,linux,windows
-
-### Linux ###
+# =============================================================================
+# Python, Windows, Linux, macOS .gitignore
+# =============================================================================
+# --------------- Universal ---------------
+*.log
+*.tmp
 *~
+*.bak
+*.local
 
-# temporary files which can be created if a process still has a handle open of a deleted file
+# --------------- Linux ---------------
 .fuse_hidden*
-
-# KDE directory preferences
 .directory
-
-# Linux trash folder which might appear on any partition or disk
 .Trash-*
-
-# .nfs files are created when an open file is removed but is still being accessed
 .nfs*
 
-### macOS ###
-# General
+# --------------- macOS ---------------
 .DS_Store
 .AppleDouble
 .LSOverride
-
-# Icon must end with two \r
 Icon
-
-# Thumbnails
 ._*
-
-# Files that might appear in the root of a volume
 .DocumentRevisions-V100
 .fseventsd
 .Spotlight-V100
@@ -68,28 +27,52 @@ Icon
 .Trashes
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
-
-# Directories potentially created on remote AFP share
 .AppleDB
 .AppleDesktop
 Network Trash Folder
 Temporary Items
 .apdisk
-
-### macOS Patch ###
-# iCloud generated files
 *.icloud
 
-### Python ###
-# Byte-compiled / optimized / DLL files
+# --------------- Windows ---------------
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# --------------- VS Code ---------------
+.vscode/*
+.history/
+.history
+*.vsix
+.ionide
+
+# --------------- JetBrains ---------------
+.idea/
+
+# --------------- Vim ---------------
+*.swp
+*.swo
+
+# --------------- Byte-compiled / optimized / DLL files ---------------
 __pycache__/
-*.py[cod]
+*.py[codz]
 *$py.class
 
-# C extensions
+# --------------- C extensions ---------------
 *.so
+*.pyd
 
-# Distribution / packaging
+# --------------- Distribution / packaging ---------------
 .Python
 build/
 develop-eggs/
@@ -109,101 +92,117 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+# --------------- PyInstaller ---------------
 *.manifest
 *.spec
 
-# Installer logs
+# --------------- Installer logs ---------------
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
+# --------------- Unit test / coverage reports ---------------
 htmlcov/
 .tox/
 .nox/
 .coverage
 .coverage.*
-.cache
+.cache/
 nosetests.xml
 coverage.xml
 *.cover
 *.py,cover
+*.py.cover
 .hypothesis/
 .pytest_cache/
-cover/
 
-# Translations
+# --------------- Test artifacts ---------------
+cover/
+results/
+*.ccache
+*.pcap
+*.pcapng
+
+# --------------- Translations ---------------
 *.mo
 *.pot
 
-# Django stuff:
-*.log
+# --------------- Django ---------------
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
-# Flask stuff:
+# --------------- Flask ---------------
 instance/
 .webassets-cache
 
-# Scrapy stuff:
+# --------------- Scrapy ---------------
 .scrapy
 
-# Sphinx documentation
+# --------------- Sphinx documentation ---------------
 docs/_build/
 
-# PyBuilder
+# --------------- PyBuilder ---------------
 .pybuilder/
 target/
 
-# Jupyter Notebook
+# --------------- Jupyter Notebook ---------------
 .ipynb_checkpoints
 
-# IPython
+# --------------- IPython ---------------
 profile_default/
 ipython_config.py
 
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
+# --------------- pyenv ---------------
 .python-version
 
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-Pipfile.lock
+# --------------- pipenv ---------------
+# Pipfile.lock
 
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-poetry.lock
+# --------------- poetry ---------------
+# poetry.lock
+poetry.toml
 
-# pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#pdm.lock
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
-#   https://pdm.fming.dev/#use-with-ide
+# --------------- uv ---------------
+# uv.lock
+
+# --------------- pdm ---------------
+# pdm.lock
 .pdm.toml
+.pdm-python
+.pdm-build/
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+# --------------- pixi ---------------
+# pixi.lock
+.pixi
+
+# --------------- PEP 582 ---------------
 __pypackages__/
 
-# Celery stuff
+# --------------- Celery ---------------
 celerybeat-schedule
 celerybeat.pid
 
-# SageMath parsed files
+# --------------- Redis ---------------
+*.rdb
+*.aof
+
+# --------------- RabbitMQ ---------------
+mnesia/
+rabbitmq/
+rabbitmq-data/
+
+# --------------- ActiveMQ ---------------
+activemq-data/
+
+# --------------- SageMath ---------------
 *.sage.py
 
-# Environments
+# --------------- Environments / secrets ---------------
 .env
+*.env
+.env.*
+.envrc
+.pypirc
 .venv
 env/
 venv/
@@ -211,90 +210,50 @@ ENV/
 env.bak/
 venv.bak/
 
-# Spyder project settings
+# --------------- Spyder ---------------
 .spyderproject
 .spyproject
 
-# Rope project settings
+# --------------- Rope ---------------
 .ropeproject
 
-# mkdocs documentation
+# --------------- mkdocs ---------------
 /site
 
-# mypy
+# --------------- mypy ---------------
 .mypy_cache/
 .dmypy.json
 dmypy.json
 
-# Pyre type checker
+# --------------- Pyre ---------------
 .pyre/
 
-# pytype static type analyzer
+# --------------- pytype ---------------
 .pytype/
 
-# Cython debug symbols
+# --------------- Cython ---------------
 cython_debug/
 
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
-
-### Python Patch ###
-# Poetry local configuration file - https://python-poetry.org/docs/configuration/#local-configuration
-poetry.toml
-
-# ruff
+# --------------- ruff ---------------
 .ruff_cache/
 
-# LSP config files
+# --------------- ty ---------------
+.ty/
+
+# --------------- LSP ---------------
 pyrightconfig.json
 
-### VisualStudioCode ###
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
+# --------------- Abstra ---------------
+.abstra/
 
-# Local History for Visual Studio Code
-.history/
+# --------------- Marimo ---------------
+marimo/_static/
+marimo/_lsp/
+__marimo__/
 
-# Built Visual Studio Code Extensions
-*.vsix
+# --------------- Streamlit ---------------
+.streamlit/secrets.toml
 
-### VisualStudioCode Patch ###
-# Ignore all local history of files
-.history
-.ionide
-
-### Windows ###
-# Windows thumbnail cache files
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
-
-# Dump file
-*.stackdump
-
-# Folder config file
-[Dd]esktop.ini
-
-# Recycle Bin used on file shares
-$RECYCLE.BIN/
-
-# Windows Installer files
-*.cab
-*.msi
-*.msix
-*.msm
-*.msp
-
-# Windows shortcuts
-*.lnk
-
-# End of https://www.toptal.com/developers/gitignore/api/macos,python,visualstudiocode,linux,windows
+# --------------- Custom ------------------
+specs/
+scripts/
