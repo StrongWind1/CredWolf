@@ -324,7 +324,7 @@ class KerberosHandler:
         raise krb_error
 
     # ===================================================================
-    # Salt retrieval  (AS-REQ without pre-auth — NOT a login attempt)
+# Salt retrieval  (AS-REQ without pre-auth — NOT a login attempt)
     # ===================================================================
     #
     # AES key derivation needs a salt that is specific to the user's
