@@ -2,10 +2,12 @@
   <a href="https://strongwind1.github.io/CredWolf/"><img src="https://raw.githubusercontent.com/StrongWind1/CredWolf/main/docs/assets/credwolf_banner.png" alt="CredWolf" width="800"></a>
 </p>
 
+<p align="center"><strong>Credential validation tool for Active Directory Domain Services.</strong></p>
+
 <p align="center">
   <a href="https://github.com/StrongWind1/CredWolf/actions/workflows/ci.yml"><img src="https://github.com/StrongWind1/CredWolf/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg" alt="Python 3.11+"></a>
-  <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0"></a>
   <a href="https://strongwind1.github.io/CredWolf/"><img src="https://img.shields.io/badge/docs-mkdocs-blue.svg" alt="Docs"></a>
 </p>
 
@@ -18,26 +20,22 @@
   <a href="https://strongwind1.github.io/CredWolf/contributing/">Contributing</a>
 </p>
 
-Credential validation tool for Active Directory Domain Services.
-
 CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos keys, or ticket files) against a domain controller and reports which credentials are valid. It also supports username enumeration via Kerberos to discover valid AD accounts without causing login attempts. It is designed for authorized penetration testing, red team engagements, and security audits where you need to verify whether recovered or suspected credentials are active.
-
-> **Warning:** This tool is intended for authorized security testing only. You must have explicit written permission from the system owner before testing credentials against any Active Directory environment. Unauthorized access to computer systems is illegal.
 
 **[Full documentation](https://strongwind1.github.io/CredWolf/)**
 
 ## Features
 
-- **NTLM + Kerberos** — validate credentials over SMB, LDAP, LDAPS, and Kerberos pre-authentication (UDP/TCP)
-- **Every secret type** — passwords, NT hashes (bare + LM:NT), RC4 keys, AES128 keys, AES256 keys, and ticket files (ccache/kirbi with auto-detection)
-- **Username enumeration** — discover valid AD accounts via Kerberos without triggering login failures or lockouts; ASREProastable accounts flagged automatically
-- **Username case correction** — when using Kerberos AES authentication, the KDC returns the correct username casing in the salt. CredWolf detects this and uses the corrected name in all output
-- **88+ credential permutations** — every meaningful combination of user sources, secret sources, encryption types, and transports
-- **Paired files** — user:password, user:hash, and user:key files for pre-matched credential testing
-- **Machine-parseable output** — `domain/user:secret@type` format, easy to grep or pipe
-- **Safety-first errors** — clock skew stops execution immediately, per-user skip on unknown/revoked principals, detailed account status detection
-- **Rate limiting** — `--delay`, `--jitter`, and `--max-lockouts` to avoid triggering lockout policies
-- **Validation only** — no post-authentication activity by design
+- **NTLM + Kerberos** - validate credentials over SMB, LDAP, LDAPS, and Kerberos pre-authentication (UDP/TCP)
+- **Every secret type** - passwords, NT hashes (bare + LM:NT), RC4 keys, AES128 keys, AES256 keys, and ticket files (ccache/kirbi with auto-detection)
+- **Username enumeration** - discover valid AD accounts via Kerberos without triggering login failures or lockouts; ASREProastable accounts flagged automatically
+- **Username case correction** - when using Kerberos AES authentication, the KDC returns the correct username casing in the salt. CredWolf detects this and uses the corrected name in all output
+- **88+ credential permutations** - every meaningful combination of user sources, secret sources, encryption types, and transports
+- **Paired files** - user:password, user:hash, and user:key files for pre-matched credential testing
+- **Machine-parseable output** - `domain/user:secret@type` format, easy to grep or pipe
+- **Safety-first errors** - clock skew stops execution immediately, per-user skip on unknown/revoked principals, detailed account status detection
+- **Rate limiting** - `--delay`, `--jitter`, and `--max-lockouts` to avoid triggering lockout policies
+- **Validation only** - no post-authentication activity by design
 
 ### Supported protocols
 
@@ -47,13 +45,22 @@ CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos 
 | **Kerberos** | UDP (default), TCP | Password, RC4 key, AES128 key, AES256 key, ticket (ccache/kirbi) |
 | **Username enumeration** | UDP (default), TCP | None required |
 
+## Example
+
+Validate a recovered password against a domain controller over SMB:
+
+```console
+$ credwolf -d evil.corp ntlm --dc-ip 10.0.0.1 -u Administrator -p 'Password1!'
+[+] evil.corp/Administrator:Password1!@password
+```
+
 ## Installation
 
+Install with [uv](https://docs.astral.sh/uv/):
+
 ```bash
-pip install credwolf
-# or
-pipx install credwolf
-# or
+uv tool install git+https://github.com/StrongWind1/CredWolf
+# or, from PyPI:
 uv tool install credwolf
 ```
 
@@ -79,7 +86,7 @@ $ credwolf -d evil.corp kerberos --kdc-ip 10.0.0.1 -u Administrator --aes256-key
 # Enumerate valid usernames (no login attempts, no lockout risk)
 $ credwolf -d evil.corp userenum --kdc-ip 10.0.0.1 -U users.txt
 [+] evil.corp/Administrator
-[+] evil.corp/svc_backup — no_preauth (ASREProastable)
+[+] evil.corp/svc_backup - no_preauth (ASREProastable)
 [*] Enumeration complete: 2/5 users found
 ```
 
@@ -99,6 +106,19 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 ## Credits
 
 Built on [Impacket](https://github.com/fortra/impacket). Inspired by [CrackMapExec](https://github.com/byt3bl33d3r/CrackMapExec), [Kerbrute](https://github.com/ropnop/kerbrute), [smartbrute](https://github.com/ShutdownRepo/smartbrute), and [SprayHound](https://github.com/Hackndo/sprayhound).
+
+## Related tools
+
+Other projects in this collection:
+
+- [AD-SecretGen](https://github.com/StrongWind1/AD-SecretGen) - derive AD password hashes and Kerberos keys from a password
+- [NTDSWolf](https://github.com/StrongWind1/NTDSWolf) - offline NTDS.dit parser and credential extractor
+- [KerbWolf](https://github.com/StrongWind1/KerbWolf) - Kerberos roasting and hash extraction toolkit
+- [Kerberos](https://github.com/StrongWind1/Kerberos) - Kerberos in Active Directory: protocol, security, and attacks
+
+## Disclaimer
+
+CredWolf is intended for authorized penetration testing, red team engagements, and security audits only. You must have explicit written permission from the system owner before testing credentials against any Active Directory environment. Unauthorized access to computer systems is illegal. The authors are not responsible for any misuse or damage caused by this tool.
 
 ## License
 
