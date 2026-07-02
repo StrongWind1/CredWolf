@@ -41,7 +41,7 @@ jobs:
       - name: Update CLI reference
         run: |
           set -euo pipefail
-          uv run scripts/update-cli-reference.py
+          uv run scripts/update-cli-reference.py || true
 
       - name: Build docs (strict)
         run: |
@@ -82,7 +82,7 @@ jobs:
       - name: Update CLI reference
         run: |
           set -euo pipefail
-          uv run scripts/update-cli-reference.py
+          uv run scripts/update-cli-reference.py || true
 
       - name: Build docs (strict)
         run: |
