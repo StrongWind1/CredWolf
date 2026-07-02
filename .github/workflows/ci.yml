@@ -1,6 +1,10 @@
 name: CI
 
-on:
+# Build / lint / format / typecheck / test on every push to main and every PR.
+# This is the tough gate: it must be green before a release can be published
+# (publish.yml re-checks this workflow's conclusion for the release commit).
+
+"on":
   push:
     branches: [main]
   pull_request:
@@ -15,39 +19,31 @@ defaults:
     shell: bash
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   lint:
-    name: Ruff
+    name: Lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "3.14"
-          check-latest: true
-
       - name: Set up uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
 
-      - name: Run Ruff check
+      - name: Ruff check
         run: |
           set -euo pipefail
           uv run ruff check
 
-      - name: Run Ruff format check
+      - name: Ruff format check
         run: |
           set -euo pipefail
           uv run ruff format --check
@@ -56,136 +52,87 @@ jobs:
     name: Type check
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "3.14"
-          check-latest: true
-
       - name: Set up uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
 
-      - name: Run type checker
+      - name: Type check
         run: |
           set -euo pipefail
           uv run ty check
 
   test:
-    name: Python ${{ matrix.python-version }}
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - python-version: "3.11"
-            check-latest: false
-          - python-version: "3.12"
-            check-latest: false
-          - python-version: "3.13"
-            check-latest: false
-          - python-version: "3.14"
-            check-latest: true
-
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: ${{ matrix.python-version }}
-          check-latest: ${{ matrix.check-latest }}
-
       - name: Set up uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
 
-      - name: Run test suite
+      - name: Test
         run: |
           set -euo pipefail
-          uv run pytest --tb=short -q
-
-  docs:
-    name: Docs
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "3.14"
-          check-latest: true
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: "**/pyproject.toml"
-
-      - name: Build docs (strict)
-        run: |
-          set -euo pipefail
-          uv run --group docs mkdocs build --strict
-
-      - name: Check internal links
-        run: |
-          set -euo pipefail
-          uv run --group docs scripts/check-docs-links.py site
+          uv run --python ${{ matrix.python-version }} pytest -q
 
   build:
-    name: Build
+    name: Build wheel + sdist
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [lint, typecheck, test, docs]
-
+    needs: [lint, typecheck, test]
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "3.14"
-          check-latest: true
-
       - name: Set up uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
 
-      - name: Build wheel
+      - name: Build
         run: |
           set -euo pipefail
-          uv build --wheel
+          uv build
 
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dist
-          path: dist/*.whl
+          path: dist/*
           if-no-files-found: error
           retention-days: 3
+
+  yamllint:
+    name: YAML lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Lint YAML in .github
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user --quiet yamllint
+          python3 -m yamllint --strict -c .yamllint.yml .github

@@ -17,7 +17,7 @@ credwolf ...
 ```
 
 **Output**
-Paste the full output (use `-vvv` for trace-level detail):
+Paste the full output (use `-vvv` for trace-level detail where supported):
 
 ```
 ...
@@ -31,4 +31,3 @@ What you expected to happen.
 - Python version: [e.g. 3.12.3]
 - CredWolf version: [e.g. 1.0.0]
 - Install method: [e.g. uv, pipx, pip]
-- Target: [e.g. Windows Server 2022 DC]

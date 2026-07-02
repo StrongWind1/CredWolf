@@ -1,13 +1,14 @@
 name: Docs
 
-on:
+# Build the documentation on every push to main and every PR (the test), and
+# deploy it to GitHub Pages on a v* tag (the publish). No deploy on PRs.
+
+"on":
   push:
     branches: [main]
-    paths:
-      - "docs/**"
-      - "mkdocs.yml"
-      - "credwolf/cli.py"
-      - "scripts/update-cli-reference.py"
+    tags: [v*]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -18,27 +19,19 @@ defaults:
     shell: bash
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: docs-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
-    name: Build docs
+    name: Build docs (strict)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "3.14"
-          check-latest: true
-
       - name: Set up uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
@@ -48,9 +41,50 @@ jobs:
       - name: Update CLI reference
         run: |
           set -euo pipefail
-          uv run scripts/update-cli-reference.py || true
+          uv run scripts/update-cli-reference.py
 
-      - name: Build docs
+      - name: Build docs (strict)
+        run: |
+          set -euo pipefail
+          uv run --group docs mkdocs build --strict
+
+      - name: Check internal doc links
+        run: |
+          set -euo pipefail
+          uv run --group docs scripts/check-docs-links.py site
+  deploy:
+    name: Deploy docs to Pages
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Update CLI reference
+        run: |
+          set -euo pipefail
+          uv run scripts/update-cli-reference.py
+
+      - name: Build docs (strict)
         run: |
           set -euo pipefail
           uv run --group docs mkdocs build --strict
@@ -63,21 +97,6 @@ jobs:
         with:
           path: site/
 
-  deploy:
-    name: Deploy docs
-    runs-on: ubuntu-latest
-    needs: build
-    timeout-minutes: 10
-
-    permissions:
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
       - name: Deploy to GitHub Pages
-        id: deployment
+        id: deploy
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

@@ -1,0 +1,47 @@
+name: Security
+
+# Supply-chain scan: audit the resolved dependency tree for known
+# vulnerabilities. Separated from ci.yml so a transient advisory-database
+# outage cannot block PRs, and so the daily scheduled run surfaces newly
+# disclosed CVEs against pinned dependencies without requiring a commit.
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Daily at 06:00 UTC.
+    - cron: 0 6 * * *
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pip-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Audit dependencies (pip-audit)
+        run: |
+          set -euo pipefail
+          uv run --with pip-audit pip-audit

@@ -1,0 +1,76 @@
+name: Release
+
+# On a v* tag: build certified distributions, attest build provenance, and
+# create a DRAFT GitHub Release with the wheel, sdist and checksums attached.
+# Publishing to PyPI is a separate, human-gated step (publish.yml) that runs
+# once the drafted Release is published. Docs are deployed by docs.yml on tag.
+
+"on":
+  push:
+    tags: [v*]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build + draft release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # create the draft GitHub Release
+      id-token: write # provenance attestation (OIDC)
+      attestations: write # write the provenance attestation
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Build wheel + sdist
+        run: |
+          set -euo pipefail
+          uv build
+
+      - name: Validate distributions
+        run: |
+          set -euo pipefail
+          uv run --with twine twine check --strict dist/*
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: |
+            dist/*.whl
+            dist/*.tar.gz
+
+      - name: Generate checksums
+        run: |
+          set -euo pipefail
+          (cd dist && sha256sum -- * > SHA256SUMS)
+
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo "${{ github.repository }}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes \
+            --draft \
+            dist/*
