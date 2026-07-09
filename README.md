@@ -57,12 +57,17 @@ $ credwolf -d evil.corp ntlm --dc-ip 10.0.0.1 -u Administrator -p 'Password1!'
 
 ## Installation
 
-Install with [uv](https://docs.astral.sh/uv/):
+Install from [PyPI](https://pypi.org/project/credwolf/):
 
-```bash
+```sh
+uv tool install credwolf        # recommended
+pip install credwolf             # or with pip
+```
+
+Or install from source:
+
+```sh
 uv tool install git+https://github.com/StrongWind1/CredWolf
-# or, from PyPI:
-uv tool install credwolf
 ```
 
 The `cw` command is also installed as a shorthand for `credwolf`.
