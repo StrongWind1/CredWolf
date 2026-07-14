@@ -4,7 +4,7 @@ name: CodeQL
 # files. Uses security-and-quality queries with local threat models enabled
 # (CLI args, env vars, filesystem treated as taint sources).
 
-run-name: "CodeQL -- ${{ github.event.head_commit.message || github.ref_name }}"
+run-name: CodeQL -- ${{ github.event.head_commit.message || github.ref_name }}
 
 "on":
   push:
@@ -12,7 +12,7 @@ run-name: "CodeQL -- ${{ github.event.head_commit.message || github.ref_name }}"
   pull_request:
     branches: [main]
   schedule:
-    - cron: "19 6 * * 6"
+    - cron: 19 6 * * 6
   workflow_dispatch:
 
 concurrency:
