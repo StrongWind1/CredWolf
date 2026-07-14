@@ -1,10 +1,10 @@
-name: CodeQL Advanced
+name: CodeQL
 
-# GitHub CodeQL static analysis of the Python source and the GitHub Actions
-# workflow files. build-mode: none -- CodeQL extracts Python without running
-# the project build.
+# GitHub CodeQL static analysis -- Python source and GitHub Actions workflow
+# files. Uses security-and-quality queries with local threat models enabled
+# (CLI args, env vars, filesystem treated as taint sources).
 
-run-name: CodeQL -- ${{ github.event.head_commit.message || github.ref_name }}
+run-name: "CodeQL -- ${{ github.event.head_commit.message || github.ref_name }}"
 
 "on":
   push:
@@ -12,7 +12,7 @@ run-name: CodeQL -- ${{ github.event.head_commit.message || github.ref_name }}
   pull_request:
     branches: [main]
   schedule:
-    - cron: 19 6 * * 6
+    - cron: "19 6 * * 6"
   workflow_dispatch:
 
 concurrency:
@@ -26,7 +26,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       security-events: write
-      packages: read
       actions: read
       contents: read
 
@@ -50,9 +49,11 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
-          queries: security-extended
+          queries: security-and-quality
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
         with:
           category: /language:${{ matrix.language }}
+
