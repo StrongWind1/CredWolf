@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Tests for CLI header output, _describe_user, and _describe_secret."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """NTLM authentication helpers (SMB and LDAP/LDAPS)."""
 
 from __future__ import annotations

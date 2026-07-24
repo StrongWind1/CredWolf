@@ -90,7 +90,12 @@ ignore = [
     "SIM108",  # ternary — readability loss on multi-arg calls
 ]
 
+[tool.ruff.lint.flake8-copyright]
+notice-rgx = "(?i)# SPDX-License-Identifier"
+
 [tool.ruff.lint.per-file-ignores]
+"credwolf/kerberos.py" = ["PLR0917"]
+"credwolf/ntlm.py" = ["PLR0917"]
 "tests/**" = [
     "D",       # docstrings — tests
     "S101",    # assert — pytest idiom

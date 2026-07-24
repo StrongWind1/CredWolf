@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Kerberos pre-authentication helpers.
 
 Why we don't use ``getKerberosTGT``

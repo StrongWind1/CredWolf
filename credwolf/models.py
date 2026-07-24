@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Data models, enumerations, and constants used across the package."""
 
 from __future__ import annotations

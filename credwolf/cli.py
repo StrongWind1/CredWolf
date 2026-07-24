@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Command-line interface for credwolf."""
 
 from __future__ import annotations

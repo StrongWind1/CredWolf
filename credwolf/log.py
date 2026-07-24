@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Structured console logger using ANSI escape codes."""
 
 from __future__ import annotations

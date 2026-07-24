@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Tests for AttackRunner result handling, output, and control flow."""
 
 from __future__ import annotations
