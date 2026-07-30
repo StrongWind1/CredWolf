@@ -1,8 +1,9 @@
 site_name: CredWolf
 site_description: Credential validation tool for Active Directory Domain Services
-site_url: https://strongwind1.github.io/CredWolf/
+site_url: https://strongwind.dev/CredWolf/
 repo_url: https://github.com/StrongWind1/CredWolf
 repo_name: StrongWind1/CredWolf
+edit_uri: edit/main/docs/
 copyright: Copyright &copy; 2025 - 2026 StrongWind1
 
 theme:
@@ -19,7 +20,7 @@ theme:
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: custom
-      accent: cyan
+      accent: custom
       toggle:
         icon: material/weather-night
         name: Switch to light mode
@@ -27,7 +28,7 @@ theme:
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: custom
-      accent: cyan
+      accent: custom
       toggle:
         icon: material/weather-sunny
         name: Switch to dark mode
@@ -54,15 +55,23 @@ theme:
     # Content
     - content.code.copy
     - content.code.annotate
+    - content.action.edit
+    - content.action.view
 
 plugins:
   - search
+  # Downloads the Google Fonts requested by theme.font at build time so the
+  # published site makes no third-party requests.
   - privacy
 
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
@@ -83,23 +92,23 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting started:
-    - Installation: getting-started/installation.md
-    - Quick start: getting-started/quick-start.md
+      - Installation: getting-started/installation.md
+      - Quick start: getting-started/quick-start.md
   - Usage:
-    - NTLM: usage/ntlm.md
-    - Kerberos: usage/kerberos.md
-    - Username enumeration: usage/userenum.md
-    - Secretsdump integration: usage/secretsdump.md
-    - Global options: usage/global-options.md
+      - NTLM: usage/ntlm.md
+      - Kerberos: usage/kerberos.md
+      - Username enumeration: usage/userenum.md
+      - Secretsdump integration: usage/secretsdump.md
+      - Global options: usage/global-options.md
   - Reference:
-    - CLI reference: reference/cli.md
-    - Output format: reference/output-format.md
-    - Hash and key formats: reference/hash-key-formats.md
-    - Error handling: reference/error-handling.md
-    - Credential matrix: reference/combination-matrix.md
+      - CLI reference: reference/cli.md
+      - Output format: reference/output-format.md
+      - Hash and key formats: reference/hash-key-formats.md
+      - Error handling: reference/error-handling.md
+      - Credential matrix: reference/combination-matrix.md
   - Internals:
-    - Kerberos flow: internals/kerberos-flow.md
-    - Known limitations: internals/limitations.md
+      - Kerberos flow: internals/kerberos-flow.md
+      - Known limitations: internals/limitations.md
   - Comparison: comparison.md
   - Roadmap: roadmap.md
   - Contributing: contributing.md
@@ -113,4 +122,15 @@ extra:
   generator: false
 
 extra_css:
+  # theme.css is the site palette; primary and accent are both `custom`,
+  # so every Material colour variable is defined there.
+  - stylesheets/theme.css
   - stylesheets/extra.css
+
+strict: true
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn

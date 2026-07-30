@@ -1,0 +1,54 @@
+/* CredWolf -- site theme.
+ *
+ * The only place this site's colour is defined. mkdocs.yml sets `primary: custom`
+ * and `accent: custom`, which make Material emit the palette attributes but ship
+ * no rules for them, so every variable below has to be supplied here. Anything
+ * omitted silently falls back to Material's indigo defaults in main.css.
+ *
+ * `:root > *` rather than `:root`: the palette attributes live on <body>, so this
+ * matches the same element and keeps winning even if the config ever moves back
+ * to a named colour. Plain `:root` targets <html> and would be overridden.
+ *
+ * Material already paints .md-header and .md-tabs from --md-primary-fg-color.
+ * Do not add direct background-color rules for them -- that is what let the
+ * header drift away from the variable that claims to define it.
+ */
+
+:root > * {
+  /* Header, tabs, footer */
+  --md-primary-fg-color: #0d1b2a;
+  --md-primary-fg-color--light: #142a41;
+  --md-primary-fg-color--dark: #081018;
+
+  /* Text drawn on top of the header bar */
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffffb3;
+
+  /* Text drawn on top of accent-filled elements */
+  --md-accent-bg-color: #ffffff;
+  --md-accent-bg-color--light: #ffffffb3;
+}
+
+/* Accent ships one shade per scheme. Material's 16 named accents are tuned to stay
+ * legible on both backgrounds; a hand-picked one is not, and every value here was
+ * solved to clear WCAG AA (4.5:1) against the scheme it renders on.
+ *
+ * --md-typeset-a-color is set explicitly because Material defaults it to
+ * var(--md-primary-fg-color). With a primary this dark that renders body links in
+ * near-black, indistinguishable from surrounding text. */
+
+[data-md-color-scheme="slate"] {
+  /* Tints all 19 hsl-derived slate surfaces -- page, code, footer, tables -- to
+   * this site's hue, instead of hardcoding each one. */
+  --md-hue: 211;
+
+  --md-accent-fg-color: #4dd0e1;
+  --md-accent-fg-color--transparent: #4dd0e11a;
+  --md-typeset-a-color: #4dd0e1;
+}
+
+[data-md-color-scheme="default"] {
+  --md-accent-fg-color: #007e8a;
+  --md-accent-fg-color--transparent: #007e8a1a;
+  --md-typeset-a-color: #007e8a;
+}

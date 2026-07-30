@@ -1,106 +1,9 @@
-/* CredWolf theme — colors matched to banner image
+/* CredWolf -- layout overrides.
  *
- * Banner palette:
- *   Background:  #0a1628 → #111d35 (deep navy gradient)
- *   Circuit:     #2a4a6b (steel blue)
- *   Glow:        #4dd0e1 / #80deea (bright cyan)
- *   Accent:      #00bcd4 (cyan)
- *   Text:        #ffffff
- *   Shield:      #8899aa (silver-gray)
+ * Colour lives in theme.css, not here. Keep this file free of palette variables
+ * and of direct background-color/color rules on Material chrome -- Material
+ * derives those from --md-primary-fg-color and --md-hue.
  */
-
-/* ---------- Custom primary color (both schemes) ---------- */
-
-:root > * {
-  --md-primary-fg-color: #0d1b2a;
-  --md-primary-fg-color--light: #1b2838;
-  --md-primary-fg-color--dark: #060e18;
-}
-
-/* ---------- Dark mode (slate — default) ---------- */
-
-[data-md-color-scheme="slate"] {
-  /* Tune the slate hue to match banner navy (210 = blue) */
-  --md-hue: 215;
-
-  /* Accent — bright cyan from the banner glow particles */
-  --md-accent-fg-color: #4dd0e1;
-  --md-accent-fg-color--transparent: #4dd0e11a;
-
-  /* Deep navy background matching banner */
-  --md-default-bg-color: #0d1117;
-  --md-default-bg-color--light: #111d2b;
-  --md-default-bg-color--lighter: #162234;
-  --md-default-bg-color--lightest: #1c2d42;
-
-  /* Code blocks — slightly lighter navy */
-  --md-code-bg-color: #0d1a2d;
-  --md-code-fg-color: #c9d1d9;
-  --md-code-hl-color: #4dd0e11a;
-
-  /* Footer */
-  --md-footer-bg-color: #060e18;
-  --md-footer-bg-color--dark: #040a12;
-  --md-footer-fg-color: #ffffffb3;
-  --md-footer-fg-color--light: #ffffff73;
-  --md-footer-fg-color--lighter: #ffffff42;
-
-  /* Typeset */
-  --md-typeset-color: #c9d1d9;
-  --md-typeset-a-color: #4dd0e1;
-}
-
-/* Header bar — match banner background */
-[data-md-color-scheme="slate"] .md-header {
-  background-color: #0a1628;
-}
-
-/* Tabs bar — same deep navy */
-[data-md-color-scheme="slate"] .md-tabs {
-  background-color: #0a1628;
-}
-
-/* Left sidebar — subtle navy */
-[data-md-color-scheme="slate"] .md-sidebar {
-  background-color: #0d1117;
-}
-
-/* Nav link hover — cyan glow */
-[data-md-color-scheme="slate"] .md-nav__link:hover {
-  color: #4dd0e1;
-}
-
-/* Active nav item — cyan */
-[data-md-color-scheme="slate"] .md-nav__link--active {
-  color: #4dd0e1;
-}
-
-/* Search bar */
-[data-md-color-scheme="slate"] .md-search__input {
-  background-color: #162234;
-}
-
-/* Admonitions — cyan-tinted border */
-[data-md-color-scheme="slate"] .md-typeset .admonition,
-[data-md-color-scheme="slate"] .md-typeset details {
-  border-color: #2a4a6b;
-}
-
-/* Tables — banner circuit line color for borders */
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
-  background-color: #1b2838;
-  color: #e0e0e0;
-}
-
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) td {
-  border-color: #1c2d42;
-}
-
-/* Announcement bar — dark navy with cyan accent */
-[data-md-color-scheme="slate"] .md-banner {
-  background-color: #060e18;
-  color: #ffffffb3;
-}
 
 /* ---------- Header title — make site name clickable via logo link ---------- */
 
@@ -127,20 +30,3 @@
   bottom: 0;
   left: 0;
   z-index: 1;
-}
-
-/* ---------- Light mode ---------- */
-
-[data-md-color-scheme="default"] {
-  --md-accent-fg-color: #00838f;
-  --md-typeset-a-color: #00838f;
-}
-
-/* Header + tabs in light mode — same deep navy as banner */
-[data-md-color-scheme="default"] .md-header {
-  background-color: #0d1b2a;
-}
-
-[data-md-color-scheme="default"] .md-tabs {
-  background-color: #0d1b2a;
-}
