@@ -15,10 +15,12 @@
  */
 
 :root > * {
-  /* Header, tabs, footer */
-  --md-primary-fg-color: #0d1b2a;
-  --md-primary-fg-color--light: #142a41;
-  --md-primary-fg-color--dark: #081018;
+  /* Header and tabs. Lightness is chosen so the bar separates from the page by
+   * the same amount on every site (~2:1); a fixed value would not, since at equal
+   * lightness a blue header reads far darker than a yellow one. */
+  --md-primary-fg-color: #2d5279;
+  --md-primary-fg-color--light: #35618f;
+  --md-primary-fg-color--dark: #244363;
 
   /* Text drawn on top of the header bar */
   --md-primary-bg-color: #ffffff;
@@ -34,13 +36,15 @@
  * solved to clear WCAG AA (4.5:1) against the scheme it renders on.
  *
  * --md-typeset-a-color is set explicitly because Material defaults it to
- * var(--md-primary-fg-color). With a primary this dark that renders body links in
- * near-black, indistinguishable from surrounding text. */
+ * var(--md-primary-fg-color), which renders body links in the header colour. */
 
 [data-md-color-scheme="slate"] {
-  /* Tints all 19 hsl-derived slate surfaces -- page, code, footer, tables -- to
-   * this site's hue, instead of hardcoding each one. */
-  --md-hue: 211;
+  /* Material's own default. Deliberately NOT the site hue: --md-hue drives all 19
+   * hsl-derived slate surfaces -- page, code blocks, footer, tables -- so tinting
+   * it per site colours the entire page and hurts readability. Backgrounds are
+   * identical and neutral across all eleven sites; only the header and accent
+   * carry the site identity. */
+  --md-hue: 225deg;
 
   --md-accent-fg-color: #4dd0e1;
   --md-accent-fg-color--transparent: #4dd0e11a;
