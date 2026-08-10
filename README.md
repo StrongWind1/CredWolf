@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://strongwind1.github.io/CredWolf/"><img src="https://raw.githubusercontent.com/StrongWind1/CredWolf/main/docs/assets/credwolf_banner.png" alt="CredWolf" width="800"></a>
+  <a href="https://strongwind.dev/CredWolf/"><img src="https://raw.githubusercontent.com/StrongWind1/CredWolf/main/docs/assets/credwolf_banner.png" alt="CredWolf" width="800"></a>
 </p>
 
 <p align="center"><strong>Credential validation tool for Active Directory Domain Services.</strong></p>
@@ -9,21 +9,21 @@
   <a href="https://pypi.org/project/credwolf/"><img src="https://img.shields.io/pypi/v/credwolf.svg" alt="PyPI"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0"></a>
-  <a href="https://strongwind1.github.io/CredWolf/"><img src="https://img.shields.io/badge/docs-mkdocs-blue.svg" alt="Docs"></a>
+  <a href="https://strongwind.dev/CredWolf/"><img src="https://img.shields.io/badge/docs-mkdocs-blue.svg" alt="Docs"></a>
 </p>
 
 <p align="center">
-  <a href="https://strongwind1.github.io/CredWolf/getting-started/installation/">Installation</a> &bull;
-  <a href="https://strongwind1.github.io/CredWolf/getting-started/quick-start/">Quick start</a> &bull;
-  <a href="https://strongwind1.github.io/CredWolf/usage/ntlm/">Usage</a> &bull;
-  <a href="https://strongwind1.github.io/CredWolf/reference/cli/">CLI reference</a> &bull;
-  <a href="https://strongwind1.github.io/CredWolf/">Documentation</a> &bull;
-  <a href="https://strongwind1.github.io/CredWolf/contributing/">Contributing</a>
+  <a href="https://strongwind.dev/CredWolf/getting-started/installation/">Installation</a> &bull;
+  <a href="https://strongwind.dev/CredWolf/getting-started/quick-start/">Quick start</a> &bull;
+  <a href="https://strongwind.dev/CredWolf/usage/ntlm/">Usage</a> &bull;
+  <a href="https://strongwind.dev/CredWolf/reference/cli/">CLI reference</a> &bull;
+  <a href="https://strongwind.dev/CredWolf/">Documentation</a> &bull;
+  <a href="https://strongwind.dev/CredWolf/contributing/">Contributing</a>
 </p>
 
 CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos keys, or ticket files) against a domain controller and reports which credentials are valid. It also supports username enumeration via Kerberos to discover valid AD accounts without causing login attempts. It is designed for authorized penetration testing, red team engagements, and security audits where you need to verify whether recovered or suspected credentials are active.
 
-**[Full documentation](https://strongwind1.github.io/CredWolf/)**
+**[Full documentation](https://strongwind.dev/CredWolf/)**
 
 ## Features
 
@@ -72,7 +72,7 @@ uv tool install git+https://github.com/StrongWind1/CredWolf
 
 The `cw` command is also installed as a shorthand for `credwolf`.
 
-See the [installation guide](https://strongwind1.github.io/CredWolf/getting-started/installation/) for source and Docker options.
+See the [installation guide](https://strongwind.dev/CredWolf/getting-started/installation/) for source and Docker options.
 
 ## Quick start
 
@@ -96,7 +96,7 @@ $ credwolf -d evil.corp userenum --kdc-ip 10.0.0.1 -U users.txt
 [*] Enumeration complete: 2/5 users found
 ```
 
-See the full [usage guide](https://strongwind1.github.io/CredWolf/usage/ntlm/) and [CLI reference](https://strongwind1.github.io/CredWolf/reference/cli/) for all options.
+See the full [usage guide](https://strongwind.dev/CredWolf/usage/ntlm/) and [CLI reference](https://strongwind.dev/CredWolf/reference/cli/) for all options.
 
 ## Development
 
