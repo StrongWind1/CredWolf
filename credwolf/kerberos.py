@@ -936,7 +936,7 @@ class KerberosHandler:
         err = str(exc)
         for error_code in cast("Any", constants.ErrorCodes):
             if error_code.name in err:
-                return error_code.name
+                return str(error_code.name)
         return err
 
     def _handle_enum_error(self, user: str, exc: Exception) -> AuthResult:
@@ -1012,8 +1012,8 @@ class KerberosHandler:
         """
         fmt = self.detect_ticket_format(path)
         if fmt == "kirbi":
-            return CCache.loadKirbiFile(path), "kirbi"
-        return CCache.loadFile(path), "ccache"
+            return cast("CCache", CCache.loadKirbiFile(path)), "kirbi"
+        return cast("CCache", CCache.loadFile(path)), "ccache"
 
     def ticket_authentication(
         self,
