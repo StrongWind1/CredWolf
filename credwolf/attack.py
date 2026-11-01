@@ -186,7 +186,7 @@ class AttackRunner:
     def _format_error(self, details: str) -> str:
         """Format a protocol error as ``RAW_CODE (human description)``."""
         desc = self._ERROR_DESC.get(details)
-        if desc:
+        if desc is not None:
             return f"{details} ({desc})"
         return details
 
@@ -209,7 +209,7 @@ class AttackRunner:
 
         credential = f"{domain}/{user}:{secret}@{secret_type}" if secret else f"{domain}/{user}@{secret_type}"
 
-        if result.success:
+        if result.success is not None and result.success:
             if result.details:
                 self.logger.success(f"{credential} — {self._format_error(result.details)}")
             else:
@@ -322,7 +322,7 @@ class AttackRunner:
 
         if password is not None:
             secret = password
-        elif lm_hash or nt_hash:
+        elif lm_hash is not None or nt_hash is not None:
             secret = _hash_display(nt_hash) or ""
         else:
             secret = rc4_key or aes128_key or aes256_key or ""
@@ -356,7 +356,7 @@ class AttackRunner:
             self.logger.verbose(f"User {idx}/{total}: {user}")
             result = self.kerberos.enumerate_user(target, domain, user, transport)
 
-            if result.success:
+            if result.success is not None and result.success:
                 found += 1
                 if result.details == "no_preauth":
                     self.logger.success(f"{domain}/{user} — {result.details} (ASREProastable)")
@@ -386,9 +386,9 @@ class AttackRunner:
 
         if opts.protocol == Protocol.USERENUM:
             # Build user list (same logic as existing).
-            if opts.user:
+            if opts.user is not None:
                 users = [opts.user]
-            elif opts.users_file:
+            elif opts.users_file is not None:
                 loaded = self._read_lines(opts.users_file)
                 if loaded is None:
                     return
@@ -403,22 +403,22 @@ class AttackRunner:
             return
 
         # Colon-separated paired files (NTLM).
-        if opts.user_pass_file:
+        if opts.user_pass_file is not None:
             self._run_colon_file(opts.user_pass_file, is_hash=False)
             return
-        if opts.user_hash_file:
+        if opts.user_hash_file is not None:
             self._run_colon_file(opts.user_hash_file, is_hash=True)
             return
 
         # Kerberos user:key file.
-        if opts.user_key_file:
+        if opts.user_key_file is not None:
             self._run_kerberos_user_key_file(opts.user_key_file)
             return
 
         # Build user list.
-        if opts.user:
+        if opts.user is not None:
             users = [opts.user]
-        elif opts.users_file:
+        elif opts.users_file is not None:
             loaded = self._read_lines(opts.users_file)
             if loaded is None:
                 return
@@ -438,19 +438,19 @@ class AttackRunner:
         # NTLM: build secret list.
         if opts.password is not None:
             self._run_users_secrets(users, passwords=[opts.password])
-        elif opts.passwords_file:
+        elif opts.passwords_file is not None:
             loaded = self._read_lines(opts.passwords_file)
             if loaded is None:
                 return
             passwords = [p.rstrip("\n\r") for p in loaded]
             self._run_users_secrets(users, passwords=passwords)
-        elif opts.hashes_file:
+        elif opts.hashes_file is not None:
             loaded = self._read_lines(opts.hashes_file)
             if loaded is None:
                 return
             hashes = _parse_hash_lines(loaded, self.logger)
             self._run_users_secrets(users, hashes=hashes)
-        elif opts.hash_value:
+        elif opts.hash_value is not None:
             parsed = _parse_hash_line(opts.hash_value)
             if parsed is None:
                 self.logger.error(f"Invalid hash format (expected NT or LM:NT): {opts.hash_value}")
@@ -492,7 +492,7 @@ class AttackRunner:
         if opts.password is not None:
             self._run_users_secrets(users, passwords=[opts.password])
             return
-        if opts.passwords_file:
+        if opts.passwords_file is not None:
             loaded = self._read_lines(opts.passwords_file)
             if loaded is None:
                 return
@@ -501,21 +501,21 @@ class AttackRunner:
             return
 
         # Inline single key(s).
-        if opts.rc4_key or opts.aes128_key or opts.aes256_key:
+        if opts.rc4_key is not None or opts.aes128_key is not None or opts.aes256_key is not None:
             inline_keys: list[tuple[str | None, str | None, str | None, str]] = []
-            if opts.rc4_key:
+            if opts.rc4_key is not None:
                 validated = _validate_hex_key(opts.rc4_key, RC4_KEY_HEX_LEN)
                 if validated is None:
                     self.logger.error(f"Invalid RC4 key (expected {RC4_KEY_HEX_LEN} hex chars): {opts.rc4_key}")
                     return
                 inline_keys.append((validated, None, None, "RC4"))
-            if opts.aes128_key:
+            if opts.aes128_key is not None:
                 validated = _validate_hex_key(opts.aes128_key, AES128_KEY_HEX_LEN)
                 if validated is None:
                     self.logger.error(f"Invalid AES128 key (expected {AES128_KEY_HEX_LEN} hex chars): {opts.aes128_key}")
                     return
                 inline_keys.append((None, validated, None, "AES128"))
-            if opts.aes256_key:
+            if opts.aes256_key is not None:
                 validated = _validate_hex_key(opts.aes256_key, AES256_KEY_HEX_LEN)
                 if validated is None:
                     self.logger.error(f"Invalid AES256 key (expected {AES256_KEY_HEX_LEN} hex chars): {opts.aes256_key}")
@@ -526,11 +526,11 @@ class AttackRunner:
 
         # Key-list based: accumulate all key files into one list.
         key_sources: list[tuple[str | None, str | None, str | None, str]] = []
-        if opts.rc4_file:
+        if opts.rc4_file is not None:
             self._load_key_list(opts.rc4_file, "RC4", RC4_KEY_HEX_LEN, key_sources, key_slot=0)
-        if opts.aes128_file:
+        if opts.aes128_file is not None:
             self._load_key_list(opts.aes128_file, "AES128", AES128_KEY_HEX_LEN, key_sources, key_slot=1)
-        if opts.aes256_file:
+        if opts.aes256_file is not None:
             self._load_key_list(opts.aes256_file, "AES256", AES256_KEY_HEX_LEN, key_sources, key_slot=2)
 
         if key_sources:
@@ -538,7 +538,7 @@ class AttackRunner:
             return
 
         # Ticket (ccache / kirbi) — validate TGT per user.
-        if opts.ticket:
+        if opts.ticket is not None:
             self._run_kerberos_ticket(users)
             return
 

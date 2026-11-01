@@ -56,7 +56,7 @@ authentication data and is harmless.
 from __future__ import annotations
 
 import binascii
-import datetime
+import datetime as dt
 import secrets
 import socket
 import struct
@@ -191,7 +191,7 @@ class KerberosHandler:
         self.response_too_big: set[str] = set()
 
         # Extracted from KRB_ERROR responses for clock-skew diagnostics.
-        self.server_time: datetime.datetime | None = None
+        self.server_time: dt.datetime | None = None
 
     def _display_user(self, user: str) -> str:
         """Return the KDC-corrected username if available, otherwise the original."""
@@ -276,10 +276,10 @@ class KerberosHandler:
                 if isinstance(item, Sequence):
                     for component in vars(item)["_componentValues"]:
                         if isinstance(component, GeneralizedTime):
-                            self.server_time = datetime.datetime.strptime(
+                            self.server_time = dt.datetime.strptime(
                                 component.asOctets().decode("utf-8"),
                                 "%Y%m%d%H%M%SZ",
-                            ).replace(tzinfo=datetime.UTC)
+                            ).replace(tzinfo=dt.UTC)
         except Exception:
             pass
 
@@ -402,7 +402,7 @@ class KerberosHandler:
         seq_set(req_body, "cname", Principal(user, type=_NT_PRINCIPAL).components_to_asn1)
         req_body["realm"] = realm
 
-        future = datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1)
+        future = dt.datetime.now(dt.UTC) + dt.timedelta(days=1)
         req_body["till"] = KerberosTime.to_asn1(future)
         req_body["rtime"] = KerberosTime.to_asn1(future)
         req_body["nonce"] = secrets.randbits(31)
@@ -569,17 +569,17 @@ class KerberosHandler:
         aes128_bytes = self._try_unhex(aes128_key)
         rc4_bytes = self._try_unhex(rc4_key)
 
-        if aes256_bytes:
+        if aes256_bytes is not None:
             enc_type = _ETYPE_MAP[EncryptionType.AES256]
             cipher = _enctype_table[enc_type]
             return cipher, Key(cipher.enctype, aes256_bytes)
 
-        if aes128_bytes:
+        if aes128_bytes is not None:
             enc_type = _ETYPE_MAP[EncryptionType.AES128]
             cipher = _enctype_table[enc_type]
             return cipher, Key(cipher.enctype, aes128_bytes)
 
-        if rc4_bytes:
+        if rc4_bytes is not None:
             enc_type = _ETYPE_MAP[EncryptionType.RC4]
             cipher = _enctype_table[enc_type]
             return cipher, Key(cipher.enctype, rc4_bytes)
@@ -637,7 +637,7 @@ class KerberosHandler:
     @staticmethod
     def _try_unhex(hex_str: str | None) -> bytes | None:
         """Convert a hex string to bytes, returning ``None`` on failure."""
-        if not hex_str:
+        if hex_str is None:
             return None
         try:
             return unhexlify(hex_str)
@@ -710,7 +710,7 @@ class KerberosHandler:
         """Build an AS-REQ with PA-ENC-TIMESTAMP pre-authentication data."""
         # Encrypt the current timestamp with the user's key.
         timestamp = PA_ENC_TS_ENC()
-        now = datetime.datetime.now(datetime.UTC)
+        now = dt.datetime.now(dt.UTC)
         timestamp["patimestamp"] = KerberosTime.to_asn1(now)
         timestamp["pausec"] = now.microsecond
 
@@ -735,7 +735,7 @@ class KerberosHandler:
         seq_set(req_body, "cname", Principal(user, type=_NT_PRINCIPAL).components_to_asn1)
         req_body["realm"] = realm
 
-        future = datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1)
+        future = dt.datetime.now(dt.UTC) + dt.timedelta(days=1)
         req_body["till"] = KerberosTime.to_asn1(future)
         req_body["rtime"] = KerberosTime.to_asn1(future)
         req_body["nonce"] = secrets.randbits(31)
@@ -746,9 +746,8 @@ class KerberosHandler:
     def _send_preauth_request(self, as_req: Any, domain: str, user: str, transport: str, target: str) -> AuthResult:
         """Send a pre-auth AS-REQ and interpret the KDC's response."""
         try:
-            tgt = self._send_receive(data=encoder.encode(as_req), host=domain, kdc_host=target, transport=transport)
-            if tgt is not None:
-                return AuthResult(success=True)
+            self._send_receive(data=encoder.encode(as_req), host=domain, kdc_host=target, transport=transport)
+            return AuthResult(success=True)
         except ConnectionError as exc:
             self.logger.error(str(exc))
             return AuthResult(success=False, details="connection failed")

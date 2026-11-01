@@ -340,50 +340,50 @@ def _namespace_to_options(ns: argparse.Namespace) -> AttackOptions:
 
 def _describe_user(options: AttackOptions) -> str:
     """Describe the user source for the header."""
-    if options.user_pass_file or options.user_hash_file or options.user_key_file:
+    if options.user_pass_file is not None or options.user_hash_file is not None or options.user_key_file is not None:
         return "paired"
-    if options.user:
+    if options.user is not None:
         return f"{options.user} (inline)"
-    if options.users_file:
+    if options.users_file is not None:
         return f"file ({options.users_file})"
     return "-"
 
 
 def _describe_secret(options: AttackOptions) -> str:
     """Describe the secret source for the header."""
-    if options.user_pass_file:
+    if options.user_pass_file is not None:
         return f"user:password ({options.user_pass_file})"
-    if options.user_hash_file:
+    if options.user_hash_file is not None:
         return f"user:nt_hash ({options.user_hash_file})"
-    if options.user_key_file:
+    if options.user_key_file is not None:
         return f"user:key ({options.user_key_file})"
     if options.password is not None:
         return "password (inline)"
-    if options.passwords_file:
+    if options.passwords_file is not None:
         return f"password ({options.passwords_file})"
-    if options.hashes_file:
+    if options.hashes_file is not None:
         return f"nt_hash ({options.hashes_file})"
-    if options.hash_value:
+    if options.hash_value is not None:
         return "nt_hash (inline)"
     inline_parts: list[str] = []
-    if options.rc4_key:
+    if options.rc4_key is not None:
         inline_parts.append("rc4_key")
-    if options.aes128_key:
+    if options.aes128_key is not None:
         inline_parts.append("aes128_key")
-    if options.aes256_key:
+    if options.aes256_key is not None:
         inline_parts.append("aes256_key")
     if inline_parts:
         return f"{', '.join(inline_parts)} (inline)"
     file_parts: list[str] = []
-    if options.rc4_file:
+    if options.rc4_file is not None:
         file_parts.append(f"rc4_key ({options.rc4_file})")
-    if options.aes128_file:
+    if options.aes128_file is not None:
         file_parts.append(f"aes128_key ({options.aes128_file})")
-    if options.aes256_file:
+    if options.aes256_file is not None:
         file_parts.append(f"aes256_key ({options.aes256_file})")
     if file_parts:
         return ", ".join(file_parts)
-    if options.ticket:
+    if options.ticket is not None:
         return f"ticket ({options.ticket})"
     return "-"
 
@@ -418,7 +418,7 @@ def _print_header(options: AttackOptions) -> None:
         parts.append("  Stop      : on first success")
     if options.max_lockouts > 0:
         parts.append(f"  Lockouts  : stop after {options.max_lockouts} consecutive")
-    if options.output_file:
+    if options.output_file is not None:
         parts.append(f"  Output    : {options.output_file}")
     parts.append("")
     print("\n".join(parts))
@@ -439,7 +439,7 @@ def main(argv: list[str] | None = None) -> None:
     try:
         with contextlib.ExitStack() as stack:
             output_fh = None
-            if options.output_file:
+            if options.output_file is not None:
                 try:
                     output_fh = stack.enter_context(Path(options.output_file).open("w"))
                 except OSError as exc:
