@@ -136,3 +136,19 @@ jobs:
           set -euo pipefail
           python3 -m pip install --user --quiet yamllint
           python3 -m yamllint --strict -c .yamllint.yml .github
+
+  actionlint:
+    name: Action lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: actionlint
+        run: |
+          set -euo pipefail
+          bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color
