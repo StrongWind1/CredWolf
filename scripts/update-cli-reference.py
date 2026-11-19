@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: Apache-2.0
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 """Regenerate docs/reference/cli.md with current --help output and option tables.
 
 Both the raw --help text and the formatted markdown tables are extracted from
