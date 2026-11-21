@@ -56,6 +56,7 @@ authentication data and is harmless.
 from __future__ import annotations
 
 import binascii
+import contextlib
 import datetime as dt
 import secrets
 import socket
@@ -270,6 +271,9 @@ class KerberosHandler:
         The server timestamp is embedded as a ``GeneralizedTime`` field inside
         the error.  If present, it is saved to :attr:`server_time` so the
         caller can report clock-skew diagnostics.
+
+        This is diagnostics only: any failure is logged and swallowed so it
+        can never change the outcome of the request that produced the response.
         """
         try:
             for item in decoder.decode(raw_response):
@@ -280,8 +284,8 @@ class KerberosHandler:
                                 component.asOctets().decode("utf-8"),
                                 "%Y%m%d%H%M%SZ",
                             ).replace(tzinfo=dt.UTC)
-        except Exception:
-            pass
+        except Exception as exc:
+            self.logger.debug(f"Could not read server time from KDC response: {exc}")
 
     def _send_receive(self, data: bytes, host: str, kdc_host: str | None, transport: str, *, expect_preauth_required: bool = False) -> bytes:
         """Send a Kerberos message and return the raw response.
@@ -364,23 +368,20 @@ class KerberosHandler:
         except Exception as exc:
             return self._handle_salt_error(user, exc)
 
-        # If the response is an AS-REP rather than KRB_ERROR, the user has
-        # pre-auth disabled (ASREProastable).  There is no e-data with salts,
-        # so synthesise a default salt: REALM + username (RFC 4120 §5.2.7.4).
-        is_as_rep = False
+        # The expected response is KDC_ERR_PREAUTH_REQUIRED with the salts
+        # in its e-data.  Anything that does not decode as an AS-REP is
+        # handed to the salt parser.
         try:
-            decoder.decode(response, asn1Spec=AS_REP())[0]
-            is_as_rep = True
+            decoder.decode(response, asn1Spec=AS_REP())
         except Exception:
-            pass
-        if is_as_rep:
-            self.logger.debug(f"User {user} — no pre-auth required (ASREProastable), using default salt")
-            default_salt = (domain_upper + user).encode()
-            enc_type = _ETYPE_MAP[etype]
-            return {enc_type: default_salt}, {}
+            return self._parse_salt_response(response, domain_upper, user)
 
-        salts, s2kparams = self._parse_salt_response(response, domain_upper, user)
-        return salts, s2kparams
+        # An AS-REP means the user has pre-auth disabled (ASREProastable).
+        # There is no e-data with salts, so synthesise a default salt:
+        # REALM + username (RFC 4120 §5.2.7.4).
+        self.logger.debug(f"User {user} — no pre-auth required (ASREProastable), using default salt")
+        default_salt = (domain_upper + user).encode()
+        return {_ETYPE_MAP[etype]: default_salt}, {}
 
     def _build_bare_as_req(self, realm: str, user: str, etypes: tuple[int, ...]) -> AS_REQ:
         """Build an AS-REQ with no pre-authentication data.
@@ -503,11 +504,11 @@ class KerberosHandler:
                         # Extract s2kparams if present (RFC 4120 §5.2.7.5).
                         # Used as the opaque parameter to string-to-key
                         # (e.g., PBKDF2 iteration count for AES per RFC 3962).
-                        try:
+                        # An unreadable value is treated as absent, which
+                        # selects the default parameters for the etype.
+                        with contextlib.suppress(PyAsn1Error):
                             if entry["s2kparams"] is not None and entry["s2kparams"].hasValue():
                                 s2kparams[etype_val] = bytes(entry["s2kparams"])
-                        except PyAsn1Error:
-                            pass
                         # Try to extract the correct username case from the salt.
                         if salt and realm and user and salt.startswith(realm):
                             correct_user = salt[len(realm) :]
@@ -747,14 +748,13 @@ class KerberosHandler:
         """Send a pre-auth AS-REQ and interpret the KDC's response."""
         try:
             self._send_receive(data=encoder.encode(as_req), host=domain, kdc_host=target, transport=transport)
-            return AuthResult(success=True)
         except ConnectionError as exc:
             self.logger.error(str(exc))
             return AuthResult(success=False, details="connection failed")
         except Exception as exc:
             return self._handle_preauth_error(user, exc)
-
-        return AuthResult(success=False)
+        else:
+            return AuthResult(success=True)
 
     def _handle_preauth_error(self, user: str, exc: Exception) -> AuthResult:
         """Map a KDC error from the pre-auth AS-REQ to an AuthResult.
