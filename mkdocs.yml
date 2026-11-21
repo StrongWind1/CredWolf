@@ -1,5 +1,5 @@
 site_name: CredWolf
-site_description: Credential validation tool for Active Directory Domain Services
+site_description: "Validate AD credentials over NTLM and Kerberos: passwords, hashes, keys, and tickets"
 site_url: https://strongwind.dev/CredWolf/
 repo_url: https://github.com/StrongWind1/CredWolf
 repo_name: StrongWind1/CredWolf
@@ -58,6 +58,9 @@ theme:
     - content.action.edit
     - content.action.view
 
+hooks:
+  - hooks/html_validity.py
+
 plugins:
   - search
   # Downloads the Google Fonts requested by theme.font at build time so the
@@ -73,7 +76,6 @@ markdown_extensions:
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
-      anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
@@ -126,6 +128,10 @@ extra_css:
   # so every Material colour variable is defined there.
   - stylesheets/theme.css
   - stylesheets/extra.css
+
+extra_javascript:
+  # a11y.js gives code blocks that scroll sideways a keyboard tab stop.
+  - javascripts/a11y.js
 
 strict: true
 

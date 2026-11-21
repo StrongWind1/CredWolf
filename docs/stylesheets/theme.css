@@ -1,4 +1,4 @@
-/* CredWolf -- site theme.
+/* CredWolf - site theme.
  *
  * The only place this site's colour is defined. mkdocs.yml sets `primary: custom`
  * and `accent: custom`, which make Material emit the palette attributes but ship
@@ -10,14 +10,20 @@
  * to a named colour. Plain `:root` targets <html> and would be overridden.
  *
  * Material already paints .md-header and .md-tabs from --md-primary-fg-color.
- * Do not add direct background-color rules for them -- that is what let the
+ * Do not add direct background-color rules for them - that is what let the
  * header drift away from the variable that claims to define it.
+ *
+ * Every StrongWind docs site shares this file except for the site name, the
+ * header colours and the two accents. Every text colour in it clears WCAG AAA
+ * (7:1) against each surface it renders on, which CI checks with pa11y on every
+ * page in both schemes.
  */
 
 :root > * {
   /* Header and tabs. Lightness is chosen so the bar separates from the page by
    * the same amount on every site (~2:1); a fixed value would not, since at equal
-   * lightness a blue header reads far darker than a yellow one. */
+   * lightness a blue header reads far darker than a yellow one. White text on it
+   * is at least 7:1. */
   --md-primary-fg-color: #2d5279;
   --md-primary-fg-color--light: #35618f;
   --md-primary-fg-color--dark: #244363;
@@ -31,28 +37,183 @@
   --md-accent-bg-color--light: #ffffffb3;
 }
 
-/* Accent ships one shade per scheme. Material's 16 named accents are tuned to stay
- * legible on both backgrounds; a hand-picked one is not, and every value here was
- * solved to clear WCAG AA (4.5:1) against the scheme it renders on.
- *
- * --md-typeset-a-color is set explicitly because Material defaults it to
- * var(--md-primary-fg-color), which renders body links in the header colour. */
+/* Accent ships one shade per scheme, in the site's hue, solved to clear 7:1 on
+ * both the page and the code background of its scheme. --md-typeset-a-color is
+ * set explicitly because Material defaults it to var(--md-primary-fg-color),
+ * which renders body links in the header colour. */
 
 [data-md-color-scheme="slate"] {
   /* Material's own default. Deliberately NOT the site hue: --md-hue drives all 19
-   * hsl-derived slate surfaces -- page, code blocks, footer, tables -- so tinting
+   * hsl-derived slate surfaces - page, code blocks, footer, tables - so tinting
    * it per site colours the entire page and hurts readability. Backgrounds are
-   * identical and neutral across all eleven sites; only the header and accent
-   * carry the site identity. */
+   * identical and neutral across all sites; only the header and accent carry
+   * the site identity. */
   --md-hue: 225deg;
 
+  /* 8.8:1 / 7.8:1 on the page (#1e2129) / code (#272a35). */
   --md-accent-fg-color: #4dd0e1;
   --md-accent-fg-color--transparent: #4dd0e11a;
   --md-typeset-a-color: #4dd0e1;
+
+  /* Text drawn on accent-filled elements. The slate accent is light, so the
+   * white set for both schemes above is unreadable on it; near-black is not. */
+  --md-accent-bg-color: #212121;
+  --md-accent-bg-color--light: #212121;
+
+  /* Material's foregrounds, restated as opaque colours at AAA contrast.
+   * Material ships them as one light tone at four alphas (0.82 / 0.56 / 0.32):
+   * the two dimmer ones are 4.9:1 and 2.4:1 on the page, and automated
+   * checkers cannot compute a ratio for a translucent text colour at all
+   * (pa11y reports "NaN:1" for every paragraph). Ratios: page / code. */
+  --md-default-fg-color: #e2e4e9;           /* 12.7 / 11.2 */
+  --md-default-fg-color--light: #c5c9d3;    /*  9.7 /  8.6 */
+  --md-default-fg-color--lighter: #b8bcc8;  /*  8.5 /  7.5 */
+  /* Hairlines and the search-hint strip; Material's is the same tone at alpha
+   * 0.12. Opaque so text drawn on it has a computable ratio (--light: 7.6:1). */
+  --md-default-fg-color--lightest: #363840;
+  --md-code-fg-color: #d5d8e2;              /*        10.0 */
+  --md-footer-bg-color: #17191f;
+
+  /* Syntax colours: Material's hues, lightened to 7.2:1 on the code background. */
+  --md-code-hl-number-color: #f0a69d;
+  --md-code-hl-special-color: #f69fbc;
+  --md-code-hl-function-color: #dca5e7;
+  --md-code-hl-constant-color: #bcb3ed;
+  --md-code-hl-keyword-color: #9eb9eb;
+  --md-code-hl-string-color: #4bcf8d;
+  --md-typeset-mark-color: #294069;
+
+  /* Keyboard keys. Material's key background is the light tone at alpha 0.12,
+   * which leaves no computable ratio; this is that colour flattened onto the
+   * page (key text on it: 9.2:1). */
+  --md-typeset-kbd-color: #363840;
 }
 
 [data-md-color-scheme="default"] {
-  --md-accent-fg-color: #007e8a;
-  --md-accent-fg-color--transparent: #007e8a1a;
-  --md-typeset-a-color: #007e8a;
+  /* 8.0:1 / 7.3:1 on the page (#ffffff) / code (#f5f5f5). */
+  --md-accent-fg-color: #005a62;
+  --md-accent-fg-color--transparent: #005a621a;
+  --md-typeset-a-color: #005a62;
+
+  /* Material's foregrounds as opaque AAA colours; see the slate block for why.
+   * Material's own values are black at alpha 0.87 / 0.54 / 0.32, i.e. 16:1,
+   * 4.6:1 and 2.3:1 on white. Ratios: page / code. */
+  --md-default-fg-color: #212121;           /* 16.1 / 14.8 */
+  --md-default-fg-color--light: #474747;    /*  9.3 /  8.5 */
+  --md-default-fg-color--lighter: #505050;  /*  8.1 /  7.4 */
+  /* Black at alpha 0.07 on white, opaque (--light on it: 7.9:1). */
+  --md-default-fg-color--lightest: #ededed;
+  --md-footer-bg-color: #212121;
+  --md-footer-bg-color--dark: #161616;
+
+  /* Syntax colours: Material's hues, darkened to 7.2:1 on the code background. */
+  --md-code-hl-number-color: #9e1f1f;
+  --md-code-hl-special-color: #a10f40;
+  --md-code-hl-function-color: #7b3387;
+  --md-code-hl-constant-color: #4c32d0;
+  --md-code-hl-keyword-color: #2b4f92;
+  --md-code-hl-string-color: #155c38;
+  --md-typeset-mark-color: #ffff80;
+}
+
+/* Same in both schemes. */
+:root > * {
+  /* Footer text, opaque. Material's are white at alpha 0.7 and 0.45; the
+   * second is 4.6:1. On the footer backgrounds of both schemes these are
+   * at least 8.2:1 and 7.4:1. */
+  --md-footer-fg-color--light: #b9b9b9;
+  --md-footer-fg-color--lighter: #b0b0b0;
+}
+
+/* The announcement bar is painted with the footer colours, dark in both
+ * schemes, so the light scheme's dark link colour is unreadable on it. Scope
+ * the link and inline-code colours to the bar instead: yellow link 11.5:1 on
+ * the bar and 8.5:1 on the code chip, white code text 12.0:1. */
+.md-banner {
+  --md-typeset-a-color: #ffd740;
+  --md-accent-fg-color: #ffffff;
+  --md-code-bg-color: #33363f;
+  --md-code-fg-color: #ffffff;
+}
+
+/* Admonition and <details> title bars. Material tints them with the type
+ * colour at alpha 0.1, and a translucent background leaves automated checkers
+ * unable to compute the contrast of the title text. These are the same tints
+ * flattened onto each scheme's page colour; title text on them is at least
+ * 13.6:1 (light) and 10.3:1 (dark). */
+.md-typeset :is(.admonition, details)[class] > :is(.admonition-title, summary) {
+  background-color: var(--admonition-title-bg, var(--md-code-bg-color));
+}
+
+[data-md-color-scheme="default"] .md-typeset .note { --admonition-title-bg: #ecf3ff; }
+[data-md-color-scheme="default"] .md-typeset .abstract { --admonition-title-bg: #e6f7ff; }
+[data-md-color-scheme="default"] .md-typeset .info { --admonition-title-bg: #e6f8fb; }
+[data-md-color-scheme="default"] .md-typeset .tip { --admonition-title-bg: #e6f9f6; }
+[data-md-color-scheme="default"] .md-typeset .success { --admonition-title-bg: #e6faee; }
+[data-md-color-scheme="default"] .md-typeset .question { --admonition-title-bg: #f0fce8; }
+[data-md-color-scheme="default"] .md-typeset .warning { --admonition-title-bg: #fff4e6; }
+[data-md-color-scheme="default"] .md-typeset .failure { --admonition-title-bg: #ffeeee; }
+[data-md-color-scheme="default"] .md-typeset .danger { --admonition-title-bg: #ffe8ec; }
+[data-md-color-scheme="default"] .md-typeset .bug { --admonition-title-bg: #fee6ee; }
+[data-md-color-scheme="default"] .md-typeset .example { --admonition-title-bg: #f2edff; }
+[data-md-color-scheme="default"] .md-typeset .quote { --admonition-title-bg: #f5f5f5; }
+
+[data-md-color-scheme="slate"] .md-typeset .note { --admonition-title-bg: #222c3e; }
+[data-md-color-scheme="slate"] .md-typeset .abstract { --admonition-title-bg: #1b2f3e; }
+[data-md-color-scheme="slate"] .md-typeset .info { --admonition-title-bg: #1b303a; }
+[data-md-color-scheme="slate"] .md-typeset .tip { --admonition-title-bg: #1b3135; }
+[data-md-color-scheme="slate"] .md-typeset .success { --admonition-title-bg: #1b322d; }
+[data-md-color-scheme="slate"] .md-typeset .question { --admonition-title-bg: #253427; }
+[data-md-color-scheme="slate"] .md-typeset .warning { --admonition-title-bg: #342c25; }
+[data-md-color-scheme="slate"] .md-typeset .failure { --admonition-title-bg: #34262d; }
+[data-md-color-scheme="slate"] .md-typeset .danger { --admonition-title-bg: #34202c; }
+[data-md-color-scheme="slate"] .md-typeset .bug { --admonition-title-bg: #341e2e; }
+[data-md-color-scheme="slate"] .md-typeset .example { --admonition-title-bg: #27253e; }
+[data-md-color-scheme="slate"] .md-typeset .quote { --admonition-title-bg: #2b2e35; }
+
+/* Links in those title bars take the title's text colour (at least 13.8:1 light,
+ * 10.8:1 dark): the accent is solved against the page, not against the tints.
+ * The underline below still marks them as links. */
+.md-typeset :is(.admonition-title, summary) a {
+  color: inherit;
+}
+
+/* ---------- Dimming by opacity ----------
+ *
+ * Material dims a few pieces of header text with `opacity`, which lowers their
+ * real contrast below WCAG AAA (inactive tabs: 4.9:1; repository facts: 5.3:1)
+ * while staying invisible to automated checkers, which compare colours and do not
+ * see opacity. They are restored to full strength here and state is shown by
+ * something other than faintness: the current section and the hovered link are
+ * underlined. */
+
+.md-tabs__link,
+.md-source__facts,
+.md-source:hover {
+  opacity: 1;
+}
+
+.md-tabs__item--active .md-tabs__link,
+.md-tabs__link:is(:hover, :focus-visible),
+.md-source:is(:hover, :focus-visible) .md-source__repository {
+  text-decoration: underline;
+  text-decoration-thickness: 0.1rem;
+  text-underline-offset: 0.3em;
+}
+
+/* ---------- Links and code blocks ----------
+ *
+ * Links in body text are underlined so they are told apart from the text around
+ * them by more than colour (WCAG 1.4.1). Navigation, header, footer and button
+ * links are left alone: where they sit already says what they are. */
+
+.md-typeset a:not(.md-nav__link, .md-footer__link, .headerlink, .md-source, .md-icon, .md-button) {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* A code block that scrolls sideways takes keyboard focus (javascripts/a11y.js);
+ * draw its focus ring inside the block so the block's rounded edge does not clip it. */
+.md-typeset pre > code:focus-visible {
+  outline-offset: -2px;
 }
