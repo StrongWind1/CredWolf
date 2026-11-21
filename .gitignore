@@ -257,3 +257,6 @@ __marimo__/
 # --------------- Custom ------------------
 specs/
 scripts/
+
+# Built-site checkers (npm ci)
+node_modules/

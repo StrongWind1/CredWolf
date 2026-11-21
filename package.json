@@ -1,0 +1,19 @@
+{
+  "name": "docs-site-checks",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Built-site checks for the docs site: Nu HTML Checker and pa11y WCAG 2 AAA. Not published; the site itself has no JavaScript dependencies.",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "scripts": {
+    "html": "node tools/require-site.js site && java -jar node_modules/vnu-jar/build/dist/vnu.jar --skip-non-html site",
+    "a11y": "node tools/require-site.js site && node tools/check-a11y.js site"
+  },
+  "devDependencies": {
+    "pa11y": "^10.0.0",
+    "puppeteer": "^25.18.1",
+    "vnu-jar": "^26.11.17"
+  }
+}
