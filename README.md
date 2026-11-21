@@ -2,7 +2,7 @@
   <a href="https://strongwind.dev/CredWolf/"><img src="https://raw.githubusercontent.com/StrongWind1/CredWolf/main/docs/assets/credwolf_banner.png" alt="CredWolf" width="800"></a>
 </p>
 
-<p align="center"><strong>Credential validation tool for Active Directory Domain Services.</strong></p>
+<p align="center"><strong>Find out which AD credentials still work. Passwords, NT hashes, Kerberos keys, and tickets, over NTLM or Kerberos.</strong></p>
 
 <p align="center">
   <a href="https://github.com/StrongWind1/CredWolf/actions/workflows/ci.yml"><img src="https://github.com/StrongWind1/CredWolf/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -17,34 +17,12 @@
   <a href="https://strongwind.dev/CredWolf/getting-started/quick-start/">Quick start</a> &bull;
   <a href="https://strongwind.dev/CredWolf/usage/ntlm/">Usage</a> &bull;
   <a href="https://strongwind.dev/CredWolf/reference/cli/">CLI reference</a> &bull;
-  <a href="https://strongwind.dev/CredWolf/">Documentation</a> &bull;
-  <a href="https://strongwind.dev/CredWolf/contributing/">Contributing</a>
+  <a href="https://strongwind.dev/CredWolf/">Documentation</a>
 </p>
 
-CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos keys, or ticket files) against a domain controller and reports which credentials are valid. It also supports username enumeration via Kerberos to discover valid AD accounts without causing login attempts. It is designed for authorized penetration testing, red team engagements, and security audits where you need to verify whether recovered or suspected credentials are active.
+---
 
-**[Full documentation](https://strongwind.dev/CredWolf/)**
-
-## Features
-
-- **NTLM + Kerberos** - validate credentials over SMB, LDAP, LDAPS, and Kerberos pre-authentication (UDP/TCP)
-- **Every secret type** - passwords, NT hashes (bare + LM:NT), RC4 keys, AES128 keys, AES256 keys, and ticket files (ccache/kirbi with auto-detection)
-- **Username enumeration** - discover valid AD accounts via Kerberos without triggering login failures or lockouts; ASREProastable accounts flagged automatically
-- **Username case correction** - when using Kerberos AES authentication, the KDC returns the correct username casing in the salt. CredWolf detects this and uses the corrected name in all output
-- **88+ credential permutations** - every meaningful combination of user sources, secret sources, encryption types, and transports
-- **Paired files** - user:password, user:hash, and user:key files for pre-matched credential testing
-- **Machine-parseable output** - `domain/user:secret@type` format, easy to grep or pipe
-- **Safety-first errors** - clock skew stops execution immediately, per-user skip on unknown/revoked principals, detailed account status detection
-- **Rate limiting** - `--delay`, `--jitter`, and `--max-lockouts` to avoid triggering lockout policies
-- **Validation only** - no post-authentication activity by design
-
-### Supported protocols
-
-| Protocol | Transport | Secret types |
-|----------|-----------|--------------|
-| **NTLM** | SMB (default), LDAP, LDAPS | Password, NT hash |
-| **Kerberos** | UDP (default), TCP | Password, RC4 key, AES128 key, AES256 key, ticket (ccache/kirbi) |
-| **Username enumeration** | UDP (default), TCP | None required |
+CredWolf tests username and secret combinations (passwords, NT hashes, Kerberos keys, or ticket files) against a domain controller and reports which credentials are valid. It also enumerates valid usernames over Kerberos without causing login attempts. Where most credential testing tools go on to enumerate shares, dump SAM, or run commands, CredWolf only validates: it does no post-authentication activity by design ([comparison](https://strongwind.dev/CredWolf/comparison/)).
 
 ## Example
 
@@ -54,6 +32,17 @@ Validate a recovered password against a domain controller over SMB:
 $ credwolf -d evil.corp ntlm --dc-ip 10.0.0.1 -u Administrator -p 'Password1!'
 [+] evil.corp/Administrator:Password1!@password
 ```
+
+## Features
+
+- **NTLM and Kerberos**: validate credentials over SMB, LDAP, LDAPS, and Kerberos pre-authentication (UDP or TCP).
+- **Every secret type**: passwords, NT hashes (bare or `LM:NT`), RC4, AES128, and AES256 keys, and ticket files (ccache or kirbi, auto-detected).
+- **Username enumeration**: discover valid AD accounts over Kerberos without login failures or lockouts; ASREProastable accounts are flagged automatically.
+- **Username case correction**: with Kerberos AES authentication the KDC returns the correct username casing in the salt, and CredWolf uses the corrected name in all output.
+- **88+ credential permutations**: every meaningful combination of user source, secret source, encryption type, and transport, including paired `user:password`, `user:hash`, and `user:key` files.
+- **Machine-parseable output**: one `domain/user:secret@type` line per valid credential, easy to grep or pipe.
+- **Safety-first errors**: clock skew stops execution immediately, unknown or revoked principals are skipped per user, and account status is detected in detail.
+- **Rate limiting**: `--delay`, `--jitter`, and `--max-lockouts` keep a run under lockout policies.
 
 ## Installation
 
@@ -70,13 +59,11 @@ Or install from source:
 uv tool install git+https://github.com/StrongWind1/CredWolf
 ```
 
-The `cw` command is also installed as a shorthand for `credwolf`.
-
-See the [installation guide](https://strongwind.dev/CredWolf/getting-started/installation/) for source and Docker options.
+The `cw` command is also installed as a shorthand for `credwolf`. Docker and the other install options are in the [installation guide](https://strongwind.dev/CredWolf/getting-started/installation/).
 
 ## Quick start
 
-```bash
+```console
 # Validate a password over SMB
 $ credwolf -d evil.corp ntlm --dc-ip 10.0.0.1 -u Administrator -p 'Password1!'
 [+] evil.corp/Administrator:Password1!@password
@@ -92,19 +79,26 @@ $ credwolf -d evil.corp kerberos --kdc-ip 10.0.0.1 -u Administrator --aes256-key
 # Enumerate valid usernames (no login attempts, no lockout risk)
 $ credwolf -d evil.corp userenum --kdc-ip 10.0.0.1 -U users.txt
 [+] evil.corp/Administrator
-[+] evil.corp/svc_backup - no_preauth (ASREProastable)
+[+] evil.corp/svc_backup — no_preauth (ASREProastable)
 [*] Enumeration complete: 2/5 users found
 ```
 
 See the full [usage guide](https://strongwind.dev/CredWolf/usage/ntlm/) and [CLI reference](https://strongwind.dev/CredWolf/reference/cli/) for all options.
 
+## Supported protocols
+
+| Protocol | Transport | Secret types |
+| --- | --- | --- |
+| **NTLM** | SMB (default), LDAP, LDAPS | Password, NT hash |
+| **Kerberos** | UDP (default), TCP | Password, RC4 key, AES128 key, AES256 key, ticket (ccache/kirbi) |
+| **Username enumeration** | UDP (default), TCP | None required |
+
 ## Development
 
-```bash
-git clone https://github.com/StrongWind1/CredWolf.git
-cd CredWolf
+```sh
+git clone https://github.com/StrongWind1/CredWolf.git && cd CredWolf
 uv sync                        # install dev dependencies
-make check                     # run lint + typecheck + tests
+make check                     # lint, typecheck, tests, strict docs build
 ```
 
 Conventional commit messages (`feat:`, `fix:`, `docs:`); run `make check` before every commit.
@@ -115,16 +109,18 @@ Built on [Impacket](https://github.com/fortra/impacket). Inspired by [CrackMapEx
 
 ## Related tools
 
-Other projects in this collection:
+- [**KerbWolf**](https://github.com/StrongWind1/KerbWolf): Kerberos roasting and TGT attack toolkit for Active Directory
+- [**NTDSWolf**](https://github.com/StrongWind1/NTDSWolf): Offline NTDS.dit parser and credential extractor for NT/LM hashes, Kerberos keys, LAPS, and gMSA
+- [**PassWolf**](https://github.com/StrongWind1/PassWolf): Spec-compliant AD password change, reset, and policy read over SAMR, Netlogon, LSA, Kerberos, LDAP
+- [**AD-SecretGen**](https://github.com/StrongWind1/AD-SecretGen): Derive every password-derived AD secret (NT/LM, Kerberos keys, WDigest) from a password
+- [**ntcompress**](https://github.com/StrongWind1/ntcompress): Pure-Python ESE record compression and ntdll RtlCompressBuffer/RtlDecompressBuffer formats
+- [**Kerberos**](https://github.com/StrongWind1/Kerberos): Protocol internals, security configuration, and attack techniques for Kerberos in Active Directory
 
-- [AD-SecretGen](https://github.com/StrongWind1/AD-SecretGen) - derive AD password hashes and Kerberos keys from a password
-- [NTDSWolf](https://github.com/StrongWind1/NTDSWolf) - offline NTDS.dit parser and credential extractor
-- [KerbWolf](https://github.com/StrongWind1/KerbWolf) - Kerberos roasting and hash extraction toolkit
-- [Kerberos](https://github.com/StrongWind1/Kerberos) - Kerberos in Active Directory: protocol, security, and attacks
+All tools: [strongwind.dev](https://strongwind.dev)
 
 ## Disclaimer
 
-CredWolf is intended for authorized penetration testing, red team engagements, and security audits only. You must have explicit written permission from the system owner before testing credentials against any Active Directory environment. Unauthorized access to computer systems is illegal. The authors are not responsible for any misuse or damage caused by this tool.
+CredWolf is for authorized security testing, research, and education. Use it only against systems and data you own or have written permission to test. You are responsible for how you use it.
 
 ## License
 
