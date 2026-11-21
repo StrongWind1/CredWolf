@@ -1,0 +1,32 @@
+{
+  "config": {
+    // Full-line prose -- no hard-wrap.
+    "MD013": false,
+    // MkDocs Material uses inline HTML (admonitions, icons, attr_list).
+    "MD033": false,
+    // Findings use repeated headings across separate files (## Summary, etc.).
+    "MD024": { "siblings_only": true },
+    // Trailing punctuation in headings is acceptable (e.g., "What Does Not Work?").
+    "MD026": false,
+    // Code blocks without language specifiers (used for generic examples).
+    "MD040": false,
+    // Mixed code block styles (fenced + indented in different contexts).
+    "MD046": false,
+    // Table column style varies by content width.
+    "MD060": false,
+    // Emphasis as heading (used sparingly in findings for inline emphasis).
+    "MD036": false,
+    // MkDocs admonitions embed code blocks and lists inside !!! blocks
+    // without surrounding blank lines -- valid MkDocs, invalid markdownlint.
+    "MD031": false,
+    "MD032": false,
+    // index.md files start with metadata/frontmatter, not an h1.
+    "MD041": false,
+    // MkDocs admonition indentation causes false positives for code spans.
+    "MD038": false,
+    // Code blocks can show literal tab-separated tool output; tabs in prose still fail.
+    "MD010": { "code_blocks": false },
+    // MkDocs builds heading anchors with its own slug rules, not GitHub's; the built site is the check.
+    "MD051": false
+  }
+}
