@@ -27,3 +27,8 @@ repos:
         language: system
         pass_filenames: false
         files: ^credwolf/cli\.py$
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.24.1
+    hooks:
+      - id: markdownlint-cli2
