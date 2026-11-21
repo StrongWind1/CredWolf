@@ -1,0 +1,15 @@
+{
+  "config": {
+    "default": true,
+    // Prose is one paragraph per line; GitHub soft-wraps it.
+    "MD013": false,
+    // HTML only for the centered README header, badges, images, and collapsible blocks.
+    "MD033": {
+      "allowed_elements": ["a", "img", "p", "strong", "h1", "h3", "details", "summary"]
+    },
+    // A README may open with a banner image or a smaller heading.
+    "MD041": false,
+    // Repeated headings are fine under different parents.
+    "MD024": { "siblings_only": true }
+  }
+}
