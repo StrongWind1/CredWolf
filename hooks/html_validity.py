@@ -70,7 +70,8 @@ def _strip_autocomplete(match: re.Match[str]) -> str:
 
 
 def _unwrap_code_blocks(match: re.Match[str]) -> str:
-    before, *rest = _CODE_BLOCK_SPLIT.split(match[1])
+    parts = [str(part) for part in _CODE_BLOCK_SPLIT.split(match[1])]
+    before, rest = parts[0], parts[1:]
     lead = [f"<p>{before.rstrip()}</p>"] if before.strip() else []
     return "\n".join(lead + [part.strip() for part in rest if part.strip()])
 
